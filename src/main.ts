@@ -13,6 +13,10 @@ import { SermonMultiplierSettingTab } from "./obsidian/SettingsTab";
 export default class SermonMultiplierPlugin extends Plugin {
   settings!: SermonMultiplierSettings;
   secrets: DriveSecrets = EMPTY_DRIVE_SECRETS;
+  // 노트 경로 기준으로 실행 중인 파이프라인을 추적한다. runOutputs는 콘솔 모달의 생명주기와
+  // 무관하게 계속 진행되므로(모달을 닫아도 취소되지 않음), 모달을 다시 열었을 때 같은 노트에
+  // 중복 실행을 시작하지 않도록 막는 용도다.
+  private runningNotePaths = new Set<string>();
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -131,15 +135,28 @@ export default class SermonMultiplierPlugin extends Plugin {
     };
   }
 
+  isRunning(file: TFile): boolean {
+    return this.runningNotePaths.has(file.path);
+  }
+
   async runOutputs(
     file: TFile,
     outputs: OutputKind[],
     styleIds?: Partial<Record<"infographic" | "slides", string | null>>,
     onProgress?: (state: OutputRunState) => void,
   ): Promise<OutputRunState[]> {
-    const ctx = this.buildPipelineContext(file, onProgress);
-    const { results } = await runPipeline(ctx, { outputs, styleIds });
-    return results;
+    if (this.runningNotePaths.has(file.path)) {
+      new Notice("⏳ 이 노트는 이미 산출물을 생성하는 중입니다. 완료될 때까지 기다려주세요.");
+      return [];
+    }
+    this.runningNotePaths.add(file.path);
+    try {
+      const ctx = this.buildPipelineContext(file, onProgress);
+      const { results } = await runPipeline(ctx, { outputs, styleIds });
+      return results;
+    } finally {
+      this.runningNotePaths.delete(file.path);
+    }
   }
 
   async runLandingPage(file: TFile): Promise<void> {
@@ -156,6 +173,7 @@ export default class SermonMultiplierPlugin extends Plugin {
   }
 
   private notifyResults(results: OutputRunState[]): void {
+    if (results.length === 0) return; // 이미 실행 중이었던 경우 — runOutputs가 자체 안내를 띄운다.
     const failed = results.filter((r) => r.status === "error");
     if (failed.length === 0) {
       new Notice("✅ 생성이 완료되었습니다.");

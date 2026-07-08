@@ -58,12 +58,23 @@ export class ConsoleModal extends Modal {
       slides: slideStyleSelect,
     };
 
+    if (this.plugin.isRunning(this.file)) {
+      contentEl.createDiv({
+        text: "⏳ 이 노트는 이미 백그라운드에서 생성 중입니다. 완료되면 알림이 뜹니다.",
+        cls: "sermon-multiplier-subtitle",
+      });
+    }
+
     for (const kind of ALL_GENERATABLE_OUTPUTS) {
       this.renderRow(contentEl, kind, styleSelectByKind[kind] ?? null);
     }
     this.renderLandingRow(contentEl);
 
     this.logEl = contentEl.createDiv({ cls: "sermon-multiplier-log" });
+    contentEl.createDiv({
+      text: "이 창을 닫아도 진행 중인 생성 작업은 계속됩니다 — 완료되면 알림이 뜨고 노트에 자동으로 반영됩니다.",
+      cls: "setting-item-description",
+    });
 
     const footer = contentEl.createDiv({ cls: "sermon-multiplier-footer" });
     const closeBtn = footer.createEl("button", { text: "닫기" });
@@ -179,6 +190,7 @@ export class ConsoleModal extends Modal {
     button.disabled = true;
     try {
       const results = await this.plugin.runOutputs(this.file, [kind], this.styleIds, this.onProgress);
+      if (results.length === 0) return; // 이미 실행 중이었던 경우 — plugin.runOutputs가 자체 안내를 띄운다.
       const failed = results.find((r) => r.kind === kind && r.status === "error");
       if (failed) new Notice(`❌ ${OUTPUT_LABELS[kind]} 생성 실패: ${failed.message}`);
       else new Notice(`✅ ${OUTPUT_LABELS[kind]} 생성 완료`);
@@ -199,6 +211,7 @@ export class ConsoleModal extends Modal {
         this.styleIds,
         this.onProgress,
       );
+      if (results.length === 0) return; // 이미 실행 중이었던 경우 — plugin.runOutputs가 자체 안내를 띄운다.
       const failedCount = results.filter((r) => r.status === "error").length;
       if (failedCount === 0) new Notice("✅ 전체 생성이 완료되었습니다.");
       else new Notice(`⚠️ ${failedCount}건은 실패했습니다. 로그를 확인하세요.`);
