@@ -35,7 +35,9 @@ export class ConsoleModal extends Modal {
   async onOpen(): Promise<void> {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("sermon-multiplier-modal");
+    // 폭 제약은 contentEl이 아니라 실제 다이얼로그 바깥 틀(modalEl)에 걸어야
+    // 내용이 앱 창 밖으로 넘쳐 잘리는 문제가 생기지 않는다.
+    this.modalEl.addClass("sermon-multiplier-modal");
 
     const raw = await this.app.vault.read(this.file);
     const { frontmatter } = parseSermonNote(raw);

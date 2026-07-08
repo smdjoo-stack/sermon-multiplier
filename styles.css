@@ -1,5 +1,11 @@
 .sermon-multiplier-modal {
   width: min(640px, 90vw);
+  max-width: 90vw;
+}
+
+.sermon-multiplier-modal .modal-content {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .sermon-multiplier-title {
@@ -13,9 +19,10 @@
 
 .sermon-multiplier-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 10px 12px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -36,8 +43,15 @@
 
 .sermon-multiplier-row-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+  margin-left: auto;
+}
+
+.sermon-multiplier-row-actions select {
+  max-width: 160px;
 }
 
 .sermon-multiplier-badge {
