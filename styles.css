@@ -107,8 +107,27 @@
   background: var(--background-modifier-hover);
 }
 
-.sermon-multiplier-hidden {
-  display: none;
+.sermon-multiplier-style-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sermon-multiplier-style-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.sermon-multiplier-style-controls select {
+  max-width: 160px;
+}
+
+.sermon-multiplier-style-text {
+  flex: 1;
+  min-width: 160px;
 }
 
 .sermon-multiplier-prompt-textarea {

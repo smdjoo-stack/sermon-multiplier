@@ -53,6 +53,8 @@ export interface RunPipelineOptions {
   outputs: OutputKind[]; // landing_page 제외, 생성할 산출물 목록
   // "infographic"/"slides"에 적용할 비주얼 스타일 프리셋 id(.sermon-multiplier/slide-styles/*.md).
   styleIds?: Partial<Record<"infographic" | "slides", string | null>>;
+  // 프리셋 대신(또는 프리셋보다 우선해) 그 자리에서 직접 입력한 스타일 지시문.
+  styleTexts?: Partial<Record<"infographic" | "slides", string | null>>;
 }
 
 export interface RunPipelineResult {
@@ -116,9 +118,10 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
       const uploader = ctx.driveUploader;
       const requests: NotebookLmArtifactRequest[] = [];
       for (const kind of nlmKinds) {
-        let styleText: string | undefined;
-        const styleId = kind === "slides" || kind === "infographic" ? options.styleIds?.[kind] : null;
-        if (styleId) {
+        const isStylable = kind === "slides" || kind === "infographic";
+        let styleText: string | undefined = isStylable ? options.styleTexts?.[kind]?.trim() || undefined : undefined;
+        const styleId = isStylable ? options.styleIds?.[kind] : null;
+        if (!styleText && styleId) {
           const preset = await getSlideStylePreset(ctx.slideStylesDir, styleId);
           styleText = preset?.body;
         }

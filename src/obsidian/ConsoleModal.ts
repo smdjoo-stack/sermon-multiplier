@@ -23,6 +23,7 @@ export class ConsoleModal extends Modal {
   private frontmatter: SermonFrontmatter | null = null;
   private rows = new Map<OutputKind, RowRefs>();
   private styleIds: Partial<Record<"infographic" | "slides", string | null>> = {};
+  private styleTexts: Partial<Record<"infographic" | "slides", string | null>> = {};
   private logEl!: HTMLElement;
   private isRunning = false;
 
@@ -51,13 +52,6 @@ export class ConsoleModal extends Modal {
       cls: "sermon-multiplier-subtitle",
     });
 
-    const infographicStyleSelect = await this.createStyleSelect("infographic", contentEl);
-    const slideStyleSelect = await this.createStyleSelect("slides", contentEl);
-    const styleSelectByKind: Partial<Record<OutputKind, HTMLSelectElement>> = {
-      infographic: infographicStyleSelect,
-      slides: slideStyleSelect,
-    };
-
     if (this.plugin.isRunning(this.file)) {
       contentEl.createDiv({
         text: "⏳ 이 노트는 이미 백그라운드에서 생성 중입니다. 완료되면 알림이 뜹니다.",
@@ -66,7 +60,10 @@ export class ConsoleModal extends Modal {
     }
 
     for (const kind of ALL_GENERATABLE_OUTPUTS) {
-      this.renderRow(contentEl, kind, styleSelectByKind[kind] ?? null);
+      if (kind === "infographic" || kind === "slides") {
+        await this.renderStyleControls(contentEl, kind);
+      }
+      this.renderRow(contentEl, kind);
     }
     this.renderLandingRow(contentEl);
 
@@ -83,10 +80,14 @@ export class ConsoleModal extends Modal {
     runAllBtn.addEventListener("click", () => void this.runAll(runAllBtn));
   }
 
-  // 비주얼 스타일 프리셋 드롭다운. 슬라이드뿐 아니라 인포그래픽에도 같은 프리셋을 적용할 수 있다.
-  private async createStyleSelect(kind: "infographic" | "slides", container: HTMLElement): Promise<HTMLSelectElement> {
-    const select = container.createEl("select");
-    select.createEl("option", { text: "스타일 없음 (기본)", value: "" });
+  // 비주얼 스타일 프리셋 드롭다운 + 직접 입력란. 슬라이드뿐 아니라 인포그래픽에도 같은 프리셋을 적용할 수 있다.
+  // 직접 입력란에 텍스트가 있으면 프리셋 선택보다 우선 적용된다.
+  private async renderStyleControls(container: HTMLElement, kind: "infographic" | "slides"): Promise<void> {
+    const wrap = container.createDiv({ cls: "sermon-multiplier-style-controls" });
+    wrap.createSpan({ text: `${OUTPUT_LABELS[kind]} 스타일`, cls: "sermon-multiplier-style-label" });
+
+    const select = wrap.createEl("select");
+    select.createEl("option", { text: "프리셋 없음", value: "" });
     try {
       const presets = await listSlideStylePresets(getSlideStylesDir(this.plugin));
       for (const preset of presets) {
@@ -99,11 +100,18 @@ export class ConsoleModal extends Modal {
     select.addEventListener("change", () => {
       this.styleIds[kind] = select.value || null;
     });
-    select.addClass("sermon-multiplier-hidden"); // 해당 행 안으로 옮겨 붙인다
-    return select;
+
+    const textInput = wrap.createEl("input", {
+      type: "text",
+      placeholder: "또는 스타일 프롬프트 직접 입력 (프리셋보다 우선)",
+      cls: "sermon-multiplier-style-text",
+    });
+    textInput.addEventListener("change", () => {
+      this.styleTexts[kind] = textInput.value.trim() || null;
+    });
   }
 
-  private renderRow(container: HTMLElement, kind: OutputKind, extraControl: HTMLElement | null): void {
+  private renderRow(container: HTMLElement, kind: OutputKind): void {
     const row = container.createDiv({ cls: "sermon-multiplier-row" });
     const label = row.createDiv({ cls: "sermon-multiplier-row-label" });
     label.createSpan({ text: OUTPUT_LABELS[kind] });
@@ -112,10 +120,6 @@ export class ConsoleModal extends Modal {
     const badge = label.createSpan({ cls: "sermon-multiplier-badge" });
 
     const actions = row.createDiv({ cls: "sermon-multiplier-row-actions" });
-    if (extraControl) {
-      extraControl.removeClass("sermon-multiplier-hidden");
-      actions.appendChild(extraControl);
-    }
     if (DRIVE_BACKED_OUTPUTS.has(kind)) {
       const sizeBtn = actions.createEl("button", { text: "크기" });
       sizeBtn.disabled = !link;
@@ -189,7 +193,12 @@ export class ConsoleModal extends Modal {
     this.isRunning = true;
     button.disabled = true;
     try {
-      const results = await this.plugin.runOutputs(this.file, [kind], this.styleIds, this.onProgress);
+      const results = await this.plugin.runOutputs(
+        this.file,
+        [kind],
+        { styleIds: this.styleIds, styleTexts: this.styleTexts },
+        this.onProgress,
+      );
       if (results.length === 0) return; // 이미 실행 중이었던 경우 — plugin.runOutputs가 자체 안내를 띄운다.
       const failed = results.find((r) => r.kind === kind && r.status === "error");
       if (failed) new Notice(`❌ ${OUTPUT_LABELS[kind]} 생성 실패: ${failed.message}`);
@@ -208,7 +217,7 @@ export class ConsoleModal extends Modal {
       const results = await this.plugin.runOutputs(
         this.file,
         ALL_GENERATABLE_OUTPUTS,
-        this.styleIds,
+        { styleIds: this.styleIds, styleTexts: this.styleTexts },
         this.onProgress,
       );
       if (results.length === 0) return; // 이미 실행 중이었던 경우 — plugin.runOutputs가 자체 안내를 띄운다.

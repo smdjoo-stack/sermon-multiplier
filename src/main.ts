@@ -142,7 +142,10 @@ export default class SermonMultiplierPlugin extends Plugin {
   async runOutputs(
     file: TFile,
     outputs: OutputKind[],
-    styleIds?: Partial<Record<"infographic" | "slides", string | null>>,
+    styleOptions?: {
+      styleIds?: Partial<Record<"infographic" | "slides", string | null>>;
+      styleTexts?: Partial<Record<"infographic" | "slides", string | null>>;
+    },
     onProgress?: (state: OutputRunState) => void,
   ): Promise<OutputRunState[]> {
     if (this.runningNotePaths.has(file.path)) {
@@ -152,7 +155,7 @@ export default class SermonMultiplierPlugin extends Plugin {
     this.runningNotePaths.add(file.path);
     try {
       const ctx = this.buildPipelineContext(file, onProgress);
-      const { results } = await runPipeline(ctx, { outputs, styleIds });
+      const { results } = await runPipeline(ctx, { outputs, ...styleOptions });
       return results;
     } finally {
       this.runningNotePaths.delete(file.path);
