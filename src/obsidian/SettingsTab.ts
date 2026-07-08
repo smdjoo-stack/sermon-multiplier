@@ -3,6 +3,7 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type SermonMultiplierPlugin from "../main";
 import { buildDriveUploader } from "./services";
 import { runNotebookLmLogin, testNotebookLmConnection } from "../core/notebooklmClient";
+import { isAiCliAvailable, resolveAiCommand } from "../core/aiCliClient";
 import { AiProviderId } from "../types";
 
 const TABS = ["drive", "notebooklm", "ai", "prompts"] as const;
@@ -264,6 +265,29 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
         text.setValue(settings.aiCommand).onChange(async (value) => {
           settings.aiCommand = value.trim();
           await this.plugin.saveSettings();
+        }),
+      );
+
+    const statusEl = containerEl.createDiv({ text: "아직 확인하지 않았습니다." });
+    new Setting(containerEl)
+      .setName("설치 확인")
+      .setDesc("PATH에서 CLI 실행 파일을 찾을 수 있는지만 확인합니다(실제 호출/비용 없음). 로그인 여부는 콘솔에서 직접 생성해봐야 확인됩니다.")
+      .addButton((button) =>
+        button.setButtonText("설치 확인").onClick(async () => {
+          button.setDisabled(true).setButtonText("확인 중...");
+          try {
+            const available = await isAiCliAvailable(settings.aiProvider);
+            if (!available) {
+              statusEl.setText(`❌ ${settings.aiProvider} 실행 파일을 PATH에서 찾지 못했습니다.`);
+            } else {
+              const command = await resolveAiCommand(settings.aiProvider, settings.aiCommand);
+              statusEl.setText(`✅ 실행 파일을 찾았습니다: ${command}`);
+            }
+          } catch (error) {
+            statusEl.setText(`❌ ${error instanceof Error ? error.message : String(error)}`);
+          } finally {
+            button.setDisabled(false).setButtonText("설치 확인");
+          }
         }),
       );
   }
