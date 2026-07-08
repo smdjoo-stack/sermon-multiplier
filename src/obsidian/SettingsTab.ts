@@ -122,6 +122,60 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
             }
           }),
       );
+
+    this.renderDriveHelp(containerEl);
+  }
+
+  private renderDriveHelp(containerEl: HTMLElement): void {
+    const details = containerEl.createEl("details");
+    details.createEl("summary", { text: "📋 Google Drive 연결 방법 (처음이신가요?)" });
+
+    const list = details.createEl("ol");
+
+    const li1 = list.createEl("li");
+    li1.createEl("a", {
+      text: "Google Cloud Console",
+      href: "https://console.cloud.google.com/",
+      attr: { target: "_blank", rel: "noopener" },
+    });
+    li1.appendText("에서 새 프로젝트를 만듭니다.");
+
+    const li2 = list.createEl("li");
+    li2.createEl("a", {
+      text: "API 및 서비스 → 라이브러리",
+      href: "https://console.cloud.google.com/apis/library",
+      attr: { target: "_blank", rel: "noopener" },
+    });
+    li2.appendText('에서 "Google Drive API"를 검색해 사용 설정합니다.');
+
+    const li3 = list.createEl("li");
+    li3.createEl("a", {
+      text: "OAuth 동의 화면",
+      href: "https://console.cloud.google.com/apis/credentials/consent",
+      attr: { target: "_blank", rel: "noopener" },
+    });
+    li3.appendText(" 설정에서 User type은 External을 선택하고, 테스트 사용자에 본인 Google 계정을 반드시 추가합니다.");
+    li3.createDiv({
+      text: '테스트 사용자로 등록하지 않으면 연결 시 "액세스 차단됨" 오류가 납니다.',
+      cls: "setting-item-description",
+    });
+
+    const li4 = list.createEl("li");
+    li4.createEl("a", {
+      text: "사용자 인증 정보",
+      href: "https://console.cloud.google.com/apis/credentials",
+      attr: { target: "_blank", rel: "noopener" },
+    });
+    li4.appendText(' 페이지에서 "+ 사용자 인증 정보 만들기 → OAuth 클라이언트 ID"를 선택하고, 애플리케이션 유형은 반드시 ');
+    li4.createEl("strong", { text: "데스크톱 앱(Desktop app)" });
+    li4.appendText("으로 만듭니다.");
+
+    list.createEl("li", {
+      text: "생성 완료 화면에 뜨는 클라이언트 ID와 클라이언트 보안 비밀(GOCSPX-로 시작)을 위 입력칸에 붙여넣고 Connect를 누릅니다.",
+    });
+    list.createEl("li", {
+      text: '"Google에서 확인하지 않은 앱" 경고가 뜨면 고급 → (앱 이름)로 이동(안전하지 않음)을 클릭합니다 — 본인이 만든 앱이라 안전합니다.',
+    });
   }
 
   private renderNotebookLmTab(containerEl: HTMLElement): void {
