@@ -321,3 +321,59 @@ function delay(ms: number): Promise<void> {
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+const LOGIN_TIMEOUT_MS = 5 * 60 * 1000; // 브라우저 로그인 상호작용을 기다려야 하므로 넉넉하게 5분
+
+// 터미널 없이 설정 화면의 "로그인" 버튼에서 바로 실행한다.
+// nlm login은 자체적으로 브라우저를 띄우고 로컬 콜백을 기다리는 방식이라
+// stdin 입력 없이도 완료되지만, 사용자가 브라우저에서 로그인을 마칠 때까지 오래 걸릴 수 있다.
+export function runNotebookLmLogin(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("uvx", ["--from", "notebooklm-mcp-cli", "nlm", "login"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      output += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      output += String(chunk);
+    });
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error("로그인이 시간 초과되었습니다(5분). 다시 시도해주세요."));
+    }, LOGIN_TIMEOUT_MS);
+
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(new Error(`nlm login 실행 실패: ${error.message}`));
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error(output.trim() || `로그인 실패 (종료 코드 ${code})`));
+    });
+  });
+}
+
+export interface NotebookLmConnectionStatus {
+  ok: boolean;
+  message: string;
+}
+
+// notebook_list를 가볍게 호출해 로그인 세션이 살아있는지 확인한다.
+export async function testNotebookLmConnection(command: string): Promise<NotebookLmConnectionStatus> {
+  const session = createNotebookLmSession(command, 30000);
+  try {
+    await session.start();
+    const result = await session.callTool<{ status?: string; error?: string }>("notebook_list", { max_results: 1 });
+    if (result.status === "error") {
+      return { ok: false, message: result.error || "인증이 필요합니다. 로그인 버튼을 눌러주세요." };
+    }
+    return { ok: true, message: "NotebookLM에 정상적으로 연결되어 있습니다." };
+  } catch (error) {
+    return { ok: false, message: describeError(error) };
+  } finally {
+    session.stop();
+  }
+}

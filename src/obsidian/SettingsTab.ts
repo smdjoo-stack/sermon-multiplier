@@ -2,6 +2,7 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type SermonMultiplierPlugin from "../main";
 import { buildDriveUploader } from "./services";
+import { runNotebookLmLogin, testNotebookLmConnection } from "../core/notebooklmClient";
 import { AiProviderId } from "../types";
 
 const TABS = ["drive", "notebooklm", "ai", "prompts"] as const;
@@ -181,8 +182,42 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
   private renderNotebookLmTab(containerEl: HTMLElement): void {
     const settings = this.plugin.settings;
 
+    new Setting(containerEl).setName("로그인").setHeading();
+    const statusEl = containerEl.createDiv({ text: "아직 확인하지 않았습니다. \"연결 테스트\"를 눌러 확인하세요." });
+
+    new Setting(containerEl)
+      .setName("Google 계정 로그인")
+      .setDesc("터미널 없이 바로 로그인합니다. 버튼을 누르면 브라우저가 열립니다 — 로그인을 마칠 때까지 최대 5분 기다립니다.")
+      .addButton((button) =>
+        button.setButtonText("로그인").onClick(async () => {
+          button.setDisabled(true).setButtonText("로그인 중...");
+          statusEl.setText("브라우저에서 Google 로그인을 완료해주세요...");
+          try {
+            await runNotebookLmLogin();
+            new Notice("✅ NotebookLM 로그인 완료!");
+            statusEl.setText("로그인이 완료되었습니다. \"연결 테스트\"로 다시 확인해보세요.");
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            new Notice(`❌ 로그인 실패: ${message}`);
+            statusEl.setText(`❌ ${message}`);
+          } finally {
+            button.setDisabled(false).setButtonText("로그인");
+          }
+        }),
+      )
+      .addButton((button) =>
+        button.setButtonText("연결 테스트").onClick(async () => {
+          button.setDisabled(true).setButtonText("확인 중...");
+          statusEl.setText("연결 확인 중...");
+          const result = await testNotebookLmConnection(settings.notebooklmMcpCommand);
+          statusEl.setText(result.ok ? `✅ ${result.message}` : `❌ ${result.message}`);
+          button.setDisabled(false).setButtonText("연결 테스트");
+        }),
+      );
+
     containerEl.createEl("p", {
-      text: "최초 1회, 터미널에서 로그인이 필요합니다: uvx --from notebooklm-mcp-cli nlm login",
+      text: "터미널을 직접 쓰고 싶다면: uvx --from notebooklm-mcp-cli nlm login",
+      cls: "setting-item-description",
     });
 
     new Setting(containerEl)
