@@ -51,7 +51,8 @@ export interface PipelineContext {
 
 export interface RunPipelineOptions {
   outputs: OutputKind[]; // landing_page 제외, 생성할 산출물 목록
-  slideStyleId?: string | null;
+  // "infographic"/"slides"에 적용할 비주얼 스타일 프리셋 id(.sermon-multiplier/slide-styles/*.md).
+  styleIds?: Partial<Record<"infographic" | "slides", string | null>>;
 }
 
 export interface RunPipelineResult {
@@ -114,13 +115,14 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
     } else {
       const uploader = ctx.driveUploader;
       const requests: NotebookLmArtifactRequest[] = [];
-      let slideStyleText: string | undefined;
-      if (nlmKinds.includes("slides") && options.slideStyleId) {
-        const preset = await getSlideStylePreset(ctx.slideStylesDir, options.slideStyleId);
-        slideStyleText = preset?.body;
-      }
       for (const kind of nlmKinds) {
-        requests.push({ kind, slideStyleText: kind === "slides" ? slideStyleText : undefined });
+        let styleText: string | undefined;
+        const styleId = kind === "slides" || kind === "infographic" ? options.styleIds?.[kind] : null;
+        if (styleId) {
+          const preset = await getSlideStylePreset(ctx.slideStylesDir, styleId);
+          styleText = preset?.body;
+        }
+        requests.push({ kind, styleText });
         ctx.onProgress?.({ kind, status: "generating" });
       }
 
@@ -159,12 +161,15 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
               artifact.mimeType,
               `${ctx.settings.driveFolderRoot}/${basename(noteDirRel)}`,
             );
+            const appliedStyleId =
+              artifact.kind === "slides" || artifact.kind === "infographic" ? options.styleIds?.[artifact.kind] : null;
             frontmatter = {
               ...frontmatter,
               outputs: {
                 ...frontmatter.outputs,
                 [artifact.kind]: driveResult.webViewLink,
-                ...(artifact.kind === "slides" && options.slideStyleId ? { slides_style: options.slideStyleId } : {}),
+                ...(artifact.kind === "slides" && appliedStyleId ? { slides_style: appliedStyleId } : {}),
+                ...(artifact.kind === "infographic" && appliedStyleId ? { infographic_style: appliedStyleId } : {}),
               },
             };
             const size = getRecommendedSize(categoryForOutput(artifact.kind));

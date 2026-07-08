@@ -174,7 +174,7 @@ function normalizeToolResult<T>(result: McpToolCallResult | undefined): T {
 
 export interface NotebookLmArtifactRequest {
   kind: "infographic" | "slides" | "video" | "audio";
-  slideStyleText?: string; // slides에만 적용 — studio_create의 focus_prompt로 전달된다
+  styleText?: string; // studio_create의 focus_prompt로 전달되는 비주얼 스타일 프리셋 본문(슬라이드/인포그래픽 공통)
 }
 
 export interface NotebookLmArtifactResult {
@@ -224,8 +224,8 @@ export async function generateNotebookLmOutputs(
         confirm: true,
         language: "ko",
       };
-      if (request.kind === "slides" && request.slideStyleText) {
-        options.focus_prompt = request.slideStyleText;
+      if (request.styleText) {
+        options.focus_prompt = request.styleText;
       }
       const created = await session.callTool<{ artifact_id?: string; status?: string; error?: string }>(
         "studio_create",

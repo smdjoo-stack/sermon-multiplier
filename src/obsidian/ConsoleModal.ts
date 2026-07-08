@@ -22,7 +22,7 @@ export class ConsoleModal extends Modal {
   private file: TFile;
   private frontmatter: SermonFrontmatter | null = null;
   private rows = new Map<OutputKind, RowRefs>();
-  private slideStyleId: string | null = null;
+  private styleIds: Partial<Record<"infographic" | "slides", string | null>> = {};
   private logEl!: HTMLElement;
   private isRunning = false;
 
@@ -42,7 +42,8 @@ export class ConsoleModal extends Modal {
     const raw = await this.app.vault.read(this.file);
     const { frontmatter } = parseSermonNote(raw);
     this.frontmatter = frontmatter;
-    this.slideStyleId = frontmatter.outputs.slides_style;
+    this.styleIds.infographic = frontmatter.outputs.infographic_style;
+    this.styleIds.slides = frontmatter.outputs.slides_style;
 
     contentEl.createEl("h2", { text: frontmatter.title || this.file.basename, cls: "sermon-multiplier-title" });
     contentEl.createDiv({
@@ -50,10 +51,15 @@ export class ConsoleModal extends Modal {
       cls: "sermon-multiplier-subtitle",
     });
 
-    const slideStyleSelect = await this.createSlideStyleSelect(contentEl);
+    const infographicStyleSelect = await this.createStyleSelect("infographic", contentEl);
+    const slideStyleSelect = await this.createStyleSelect("slides", contentEl);
+    const styleSelectByKind: Partial<Record<OutputKind, HTMLSelectElement>> = {
+      infographic: infographicStyleSelect,
+      slides: slideStyleSelect,
+    };
 
     for (const kind of ALL_GENERATABLE_OUTPUTS) {
-      this.renderRow(contentEl, kind, kind === "slides" ? slideStyleSelect : null);
+      this.renderRow(contentEl, kind, styleSelectByKind[kind] ?? null);
     }
     this.renderLandingRow(contentEl);
 
@@ -66,22 +72,23 @@ export class ConsoleModal extends Modal {
     runAllBtn.addEventListener("click", () => void this.runAll(runAllBtn));
   }
 
-  private async createSlideStyleSelect(container: HTMLElement): Promise<HTMLSelectElement> {
+  // 비주얼 스타일 프리셋 드롭다운. 슬라이드뿐 아니라 인포그래픽에도 같은 프리셋을 적용할 수 있다.
+  private async createStyleSelect(kind: "infographic" | "slides", container: HTMLElement): Promise<HTMLSelectElement> {
     const select = container.createEl("select");
     select.createEl("option", { text: "스타일 없음 (기본)", value: "" });
     try {
       const presets = await listSlideStylePresets(getSlideStylesDir(this.plugin));
       for (const preset of presets) {
         const option = select.createEl("option", { text: preset.title, value: preset.id });
-        if (preset.id === this.slideStyleId) option.selected = true;
+        if (preset.id === this.styleIds[kind]) option.selected = true;
       }
     } catch (error) {
-      console.error("슬라이드 스타일 목록 로드 실패:", error);
+      console.error("비주얼 스타일 목록 로드 실패:", error);
     }
     select.addEventListener("change", () => {
-      this.slideStyleId = select.value || null;
+      this.styleIds[kind] = select.value || null;
     });
-    select.addClass("sermon-multiplier-hidden"); // 슬라이드 행 안으로 옮겨 붙인다
+    select.addClass("sermon-multiplier-hidden"); // 해당 행 안으로 옮겨 붙인다
     return select;
   }
 
@@ -171,7 +178,7 @@ export class ConsoleModal extends Modal {
     this.isRunning = true;
     button.disabled = true;
     try {
-      const results = await this.plugin.runOutputs(this.file, [kind], this.slideStyleId, this.onProgress);
+      const results = await this.plugin.runOutputs(this.file, [kind], this.styleIds, this.onProgress);
       const failed = results.find((r) => r.kind === kind && r.status === "error");
       if (failed) new Notice(`❌ ${OUTPUT_LABELS[kind]} 생성 실패: ${failed.message}`);
       else new Notice(`✅ ${OUTPUT_LABELS[kind]} 생성 완료`);
@@ -189,7 +196,7 @@ export class ConsoleModal extends Modal {
       const results = await this.plugin.runOutputs(
         this.file,
         ALL_GENERATABLE_OUTPUTS,
-        this.slideStyleId,
+        this.styleIds,
         this.onProgress,
       );
       const failedCount = results.filter((r) => r.status === "error").length;

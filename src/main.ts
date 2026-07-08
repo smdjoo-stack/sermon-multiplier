@@ -134,11 +134,11 @@ export default class SermonMultiplierPlugin extends Plugin {
   async runOutputs(
     file: TFile,
     outputs: OutputKind[],
-    slideStyleId?: string | null,
+    styleIds?: Partial<Record<"infographic" | "slides", string | null>>,
     onProgress?: (state: OutputRunState) => void,
   ): Promise<OutputRunState[]> {
     const ctx = this.buildPipelineContext(file, onProgress);
-    const { results } = await runPipeline(ctx, { outputs, slideStyleId });
+    const { results } = await runPipeline(ctx, { outputs, styleIds });
     return results;
   }
 

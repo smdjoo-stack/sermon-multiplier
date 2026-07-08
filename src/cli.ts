@@ -22,7 +22,8 @@ try {
   } else {
     throw new Error(
       "사용법: sermon-multiplier <run|mcp>\n" +
-        "  run --vault <Vault경로> --note <노트 상대경로> [--outputs all|infographic,slides,...] [--slide-style <id>]\n" +
+        "  run --vault <Vault경로> --note <노트 상대경로> [--outputs all|infographic,slides,...]\n" +
+        "      [--slide-style <id>] [--infographic-style <id>]\n" +
         "      [--ai-provider <claude|gemini|codex|grok|antigravity|custom>] [--ai-command <명령>]\n" +
         "  mcp",
     );
@@ -37,12 +38,15 @@ async function runCommand(tokens: string[]): Promise<void> {
   const vaultPath = requireOption(options, "vault");
   const notePath = requireOption(options, "note");
   const outputs = parseOutputs(options.outputs || "all");
-  const slideStyleId = options["slide-style"] || null;
+  const styleIds = {
+    slides: options["slide-style"] || null,
+    infographic: options["infographic-style"] || null,
+  };
 
   const ctx = await buildPipelineContext(vaultPath, notePath);
   if (options["ai-provider"]) ctx.settings.aiProvider = options["ai-provider"] as AiProviderId;
   if (options["ai-command"]) ctx.settings.aiCommand = options["ai-command"];
-  const { results } = await runPipeline(ctx, { outputs, slideStyleId });
+  const { results } = await runPipeline(ctx, { outputs, styleIds });
   printResults(results);
 }
 
@@ -114,7 +118,10 @@ async function callTool(params: { name?: string; arguments?: Record<string, unkn
     const outputs = parseOutputs(stringArg(args, "outputs", "all"));
     const { results } = await runPipeline(ctx, {
       outputs,
-      slideStyleId: stringArg(args, "slideStyleId") || null,
+      styleIds: {
+        slides: stringArg(args, "slideStyleId") || null,
+        infographic: stringArg(args, "infographicStyleId") || null,
+      },
     });
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
   }
@@ -157,6 +164,7 @@ function tools() {
           notePath: { type: "string", description: "Vault 루트 기준 설교 노트 상대경로" },
           outputs: { type: "string", description: "all 또는 콤마로 구분된 산출물 목록" },
           slideStyleId: { type: "string" },
+          infographicStyleId: { type: "string" },
         },
       },
     },

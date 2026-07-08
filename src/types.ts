@@ -18,6 +18,7 @@ export const ALL_GENERATABLE_OUTPUTS: OutputKind[] = [...NOTEBOOKLM_OUTPUTS, ...
 
 export interface SermonOutputs {
   infographic: string | null;
+  infographic_style: string | null;
   slides: string | null;
   slides_style: string | null;
   video: string | null;
@@ -48,6 +49,7 @@ export interface SermonFrontmatter {
 export function emptyOutputs(): SermonOutputs {
   return {
     infographic: null,
+    infographic_style: null,
     slides: null,
     slides_style: null,
     video: null,
