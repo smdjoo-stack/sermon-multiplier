@@ -21,7 +21,9 @@ const AI_CLI_PROVIDERS: Record<Exclude<AiProviderId, "custom">, AiCliProviderCon
       process.platform === "win32"
         ? ["agy.exe", "agy.cmd", "agy.ps1", "agy", "antigravity.exe", "antigravity.cmd", "antigravity.ps1", "antigravity"]
         : ["agy", "antigravity"],
-    args: "-p",
+    // agy의 -p/--print는 값이 필요한 플래그라 stdin만으로는 "flag needs an argument: -p" 오류가 난다.
+    // grok과 같은 방식으로 stdin을 $(cat)으로 읽어 인자로 넘긴다.
+    args: process.platform === "win32" ? "-p" : '-p "$(cat)"',
   },
 };
 
