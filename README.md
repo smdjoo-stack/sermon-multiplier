@@ -1,4 +1,4 @@
-# 설교 기반 통합 목회자료 생성 플러그인 (sermon-multiplier)
+# Sermon Multiplier (sermon-multiplier)
 
 설교 노트 하나(옵시디언 vault 안의 마크다운 파일)를 소스로 삼아 7가지 목회 산출물을 자동 생성하고, 이를 한 페이지에서 볼 수 있는 통합 랜딩페이지까지 만들어주는 옵시디언 플러그인입니다.
 
