@@ -162,6 +162,19 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
       cls: "setting-item-description",
     });
 
+    const li3b = list.createEl("li");
+    li3b.appendText("같은 OAuth 동의 화면의 ");
+    li3b.createEl("strong", { text: "데이터 액세스(Data access)" });
+    li3b.appendText(' 메뉴 → ');
+    li3b.createEl("strong", { text: "범위 추가 또는 삭제(Add or remove scopes)" });
+    li3b.appendText(' → "drive.file"로 검색해 ');
+    li3b.createEl("code", { text: ".../auth/drive.file" });
+    li3b.appendText("를 체크하고 업데이트·저장합니다.");
+    li3b.createDiv({
+      text: '이 단계를 건너뛰면 로그인은 되지만 실제 업로드에서 "403" 오류가 납니다.',
+      cls: "setting-item-description",
+    });
+
     const li4 = list.createEl("li");
     li4.createEl("a", {
       text: "사용자 인증 정보",
