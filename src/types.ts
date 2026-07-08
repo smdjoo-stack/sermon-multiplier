@@ -2,6 +2,9 @@
 
 export type OutputStatus = "draft" | "generating" | "partial" | "complete" | "error";
 
+// 큐티/성경공부처럼 긴 결과물을 요청하는 프롬프트는 3분으로는 부족할 수 있어 넉넉하게 잡는다.
+export const DEFAULT_AI_CLI_TIMEOUT_SECONDS = 300;
+
 export type OutputKind =
   | "infographic"
   | "slides"
@@ -153,6 +156,7 @@ export interface SermonMultiplierSettings {
   // 로컬 AI CLI
   aiProvider: AiProviderId;
   aiCommand: string;
+  aiCliTimeoutSeconds: number;
 
   // 프롬프트 템플릿 (사용자 수정 가능)
   promptTemplates: PromptTemplates;
@@ -172,6 +176,7 @@ export const DEFAULT_SETTINGS: SermonMultiplierSettings = {
 
   aiProvider: "antigravity",
   aiCommand: "",
+  aiCliTimeoutSeconds: DEFAULT_AI_CLI_TIMEOUT_SECONDS,
 
   promptTemplates: {
     summary: "",

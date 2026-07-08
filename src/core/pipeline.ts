@@ -89,7 +89,7 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
       const template = resolvePromptTemplate(kind, ctx.settings.promptTemplates);
       const prompt = renderPrompt(template, frontmatter, originalBody);
       const command = await resolveAiCommand(ctx.settings.aiProvider, ctx.settings.aiCommand);
-      const content = await runAiCommand(command, prompt);
+      const content = await runAiCommand(command, prompt, ctx.settings.aiCliTimeoutSeconds);
 
       const fileName = LOCAL_OUTPUT_FILE[kind];
       await writeFile(join(noteDirAbs, fileName), `${content.trim()}\n`, "utf8");

@@ -4,7 +4,7 @@ import type SermonMultiplierPlugin from "../main";
 import { buildDriveUploader } from "./services";
 import { runNotebookLmLogin, testNotebookLmConnection } from "../core/notebooklmClient";
 import { isAiCliAvailable, resolveAiCommand } from "../core/aiCliClient";
-import { AiProviderId } from "../types";
+import { AiProviderId, DEFAULT_AI_CLI_TIMEOUT_SECONDS } from "../types";
 
 const TABS = ["drive", "notebooklm", "ai", "prompts"] as const;
 type TabId = (typeof TABS)[number];
@@ -277,6 +277,17 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
       .addText((text) =>
         text.setValue(settings.aiCommand).onChange(async (value) => {
           settings.aiCommand = value.trim();
+          await this.plugin.saveSettings();
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("타임아웃 (초)")
+      .setDesc("AI CLI 응답을 기다리는 최대 시간. 큐티(2일치)·성경공부자료처럼 긴 결과물은 기본 3분보다 오래 걸릴 수 있어 넉넉하게 잡는 것을 권장합니다.")
+      .addText((text) =>
+        text.setValue(String(settings.aiCliTimeoutSeconds)).onChange(async (value) => {
+          const parsed = Number(value);
+          settings.aiCliTimeoutSeconds = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_AI_CLI_TIMEOUT_SECONDS;
           await this.plugin.saveSettings();
         }),
       );

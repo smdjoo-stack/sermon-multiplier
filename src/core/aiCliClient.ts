@@ -4,7 +4,7 @@
 import { spawn } from "node:child_process";
 import { readdir, stat } from "node:fs/promises";
 import { delimiter, join } from "node:path";
-import { AiProviderId } from "../types";
+import { AiProviderId, DEFAULT_AI_CLI_TIMEOUT_SECONDS } from "../types";
 
 interface AiCliProviderConfig {
   names: string[];
@@ -27,8 +27,6 @@ const AI_CLI_PROVIDERS: Record<Exclude<AiProviderId, "custom">, AiCliProviderCon
   },
 };
 
-const AI_CLI_TIMEOUT_MS = 180000;
-
 export async function resolveAiCommand(provider: AiProviderId, aiCommand: string): Promise<string> {
   if (provider === "custom") {
     if (!aiCommand.trim()) {
@@ -49,7 +47,11 @@ export async function isAiCliAvailable(provider: AiProviderId): Promise<boolean>
   return (await findExecutable(config.names)) !== null;
 }
 
-export function runAiCommand(command: string, prompt: string): Promise<string> {
+export function runAiCommand(
+  command: string,
+  prompt: string,
+  timeoutSeconds: number = DEFAULT_AI_CLI_TIMEOUT_SECONDS,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, {
       shell: shellPath(),
@@ -60,8 +62,8 @@ export function runAiCommand(command: string, prompt: string): Promise<string> {
     let stderr = "";
     const timer = setTimeout(() => {
       child.kill("SIGTERM");
-      reject(new Error(`AI CLI 실행이 시간 초과되었습니다: ${command}`));
-    }, AI_CLI_TIMEOUT_MS);
+      reject(new Error(`AI CLI 실행이 시간 초과되었습니다(${timeoutSeconds}초): ${command}`));
+    }, timeoutSeconds * 1000);
 
     child.stdout.on("data", (chunk) => {
       stdout += chunk;
