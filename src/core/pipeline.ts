@@ -77,11 +77,9 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
     ctx.onProgress?.(state);
   };
 
-  const localKinds = options.outputs.filter((k) => (LOCAL_AI_OUTPUTS as OutputKind[]).includes(k)) as (
-    | "summary"
-    | "qt"
-    | "bible_study"
-  )[];
+  const localKinds = options.outputs.filter(
+    (kind): kind is "summary" | "qt" | "bible_study" => LOCAL_AI_OUTPUTS.includes(kind),
+  );
   for (const kind of localKinds) {
     ctx.onProgress?.({ kind, status: "generating" });
     try {
@@ -101,12 +99,9 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
     }
   }
 
-  const nlmKinds = options.outputs.filter((k) => (NOTEBOOKLM_OUTPUTS as OutputKind[]).includes(k)) as (
-    | "infographic"
-    | "slides"
-    | "video"
-    | "audio"
-  )[];
+  const nlmKinds = options.outputs.filter(
+    (kind): kind is "infographic" | "slides" | "video" | "audio" => NOTEBOOKLM_OUTPUTS.includes(kind),
+  );
   if (nlmKinds.length > 0) {
     if (!ctx.driveUploader || !ctx.driveUploader.isConnected()) {
       for (const kind of nlmKinds) {

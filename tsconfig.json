@@ -11,6 +11,11 @@
     "importHelpers": true,
     "isolatedModules": true,
     "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
     "lib": ["DOM", "ES2021"],
     "skipLibCheck": true
   },

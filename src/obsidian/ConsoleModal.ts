@@ -43,7 +43,7 @@ export class ConsoleModal extends Modal {
     this.slideStyleId = frontmatter.outputs.slides_style;
 
     contentEl.createEl("h2", { text: frontmatter.title || this.file.basename, cls: "sermon-multiplier-title" });
-    contentEl.createEl("div", {
+    contentEl.createDiv({
       text: [frontmatter.scripture, frontmatter.date].filter(Boolean).join(" · "),
       cls: "sermon-multiplier-subtitle",
     });
@@ -79,7 +79,7 @@ export class ConsoleModal extends Modal {
     select.addEventListener("change", () => {
       this.slideStyleId = select.value || null;
     });
-    select.style.display = "none"; // 슬라이드 행 안으로 옮겨 붙인다
+    select.addClass("sermon-multiplier-hidden"); // 슬라이드 행 안으로 옮겨 붙인다
     return select;
   }
 
@@ -93,7 +93,7 @@ export class ConsoleModal extends Modal {
 
     const actions = row.createDiv({ cls: "sermon-multiplier-row-actions" });
     if (extraControl) {
-      extraControl.style.display = "";
+      extraControl.removeClass("sermon-multiplier-hidden");
       actions.appendChild(extraControl);
     }
     if (DRIVE_BACKED_OUTPUTS.has(kind)) {

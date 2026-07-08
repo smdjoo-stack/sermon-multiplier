@@ -47,7 +47,7 @@ export function getSizePresets(category: SizeCategory): SizeOption[] {
 
 export function getRecommendedSize(category: SizeCategory): SizeOption {
   const presets = SIZE_PRESETS[category];
-  return presets.find((preset) => preset.recommended) || presets[0];
+  return presets.find((preset) => preset.recommended) || presets[0]!;
 }
 
 export function getSizeById(category: SizeCategory, sizeId: string): SizeOption {

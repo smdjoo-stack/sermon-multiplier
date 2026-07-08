@@ -61,34 +61,47 @@ async function mcpCommand(): Promise<void> {
   }
 }
 
+interface JsonRpcRequest {
+  jsonrpc?: string;
+  id?: number;
+  method?: string;
+  params?: { name?: string; arguments?: Record<string, unknown>; protocolVersion?: string };
+}
+
 async function handleJsonRpc(line: string): Promise<void> {
-  let message: any;
+  let message: JsonRpcRequest;
   try {
-    message = JSON.parse(line);
+    message = JSON.parse(line) as JsonRpcRequest;
   } catch {
     return;
   }
-  if (!("id" in message)) return;
+  if (typeof message.id !== "number") return;
+  const id = message.id;
 
   try {
     if (message.method === "initialize") {
-      send(message.id, {
+      send(id, {
         protocolVersion: message.params?.protocolVersion || "2025-06-18",
         capabilities: { tools: {} },
         serverInfo: { name: "sermon-multiplier", version: "0.1.0" },
       });
     } else if (message.method === "tools/list") {
-      send(message.id, { tools: tools() });
+      send(id, { tools: tools() });
     } else if (message.method === "tools/call") {
-      send(message.id, await callTool(message.params));
+      send(id, await callTool(message.params));
     } else if (message.method === "ping") {
-      send(message.id, {});
+      send(id, {});
     } else {
-      sendError(message.id, -32601, `알 수 없는 메서드: ${message.method}`);
+      sendError(id, -32601, `알 수 없는 메서드: ${message.method}`);
     }
   } catch (error) {
-    sendError(message.id, -32000, error instanceof Error ? error.message : String(error));
+    sendError(id, -32000, error instanceof Error ? error.message : String(error));
   }
+}
+
+function stringArg(args: Record<string, unknown>, key: string, fallback = ""): string {
+  const value = args[key];
+  return typeof value === "string" ? value : fallback;
 }
 
 async function callTool(params: { name?: string; arguments?: Record<string, unknown> } = {}): Promise<unknown> {
@@ -96,35 +109,35 @@ async function callTool(params: { name?: string; arguments?: Record<string, unkn
   const args = params.arguments || {};
 
   if (name === "generate_outputs") {
-    const vaultPath = String(args.vaultDir || "");
-    const ctx = await buildPipelineContext(vaultPath, String(args.notePath || ""));
-    const outputs = parseOutputs(String(args.outputs || "all"));
+    const vaultPath = stringArg(args, "vaultDir");
+    const ctx = await buildPipelineContext(vaultPath, stringArg(args, "notePath"));
+    const outputs = parseOutputs(stringArg(args, "outputs", "all"));
     const { results } = await runPipeline(ctx, {
       outputs,
-      slideStyleId: (args.slideStyleId as string) || null,
+      slideStyleId: stringArg(args, "slideStyleId") || null,
     });
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
   }
 
   if (name === "generate_landing_page") {
     const result = await generateLandingPage({
-      vaultPath: String(args.vaultDir || ""),
-      notePath: String(args.notePath || ""),
+      vaultPath: stringArg(args, "vaultDir"),
+      notePath: stringArg(args, "notePath"),
     });
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 
   if (name === "reembed_output") {
     await reembedOutput(
-      { vaultPath: String(args.vaultDir || ""), notePath: String(args.notePath || "") },
-      args.kind as "infographic" | "slides" | "video" | "audio",
-      String(args.sizeId || "medium"),
+      { vaultPath: stringArg(args, "vaultDir"), notePath: stringArg(args, "notePath") },
+      stringArg(args, "kind") as "infographic" | "slides" | "video" | "audio",
+      stringArg(args, "sizeId", "medium"),
     );
     return { content: [{ type: "text", text: "임베드 크기를 변경했습니다." }] };
   }
 
   if (name === "list_slide_styles") {
-    const presets = await listSlideStylePresets(join(String(args.vaultDir || ""), ".sermon-multiplier", "slide-styles"));
+    const presets = await listSlideStylePresets(join(stringArg(args, "vaultDir"), ".sermon-multiplier", "slide-styles"));
     return { content: [{ type: "text", text: JSON.stringify(presets.map((p) => ({ id: p.id, title: p.title })), null, 2) }] };
   }
 
@@ -239,7 +252,7 @@ function parseArgs(tokens: string[]): Record<string, string> {
   const options: Record<string, string> = {};
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
-    if (!token.startsWith("--")) throw new Error(`예상치 못한 인자: ${token}`);
+    if (!token || !token.startsWith("--")) throw new Error(`예상치 못한 인자: ${token}`);
     const key = token.slice(2);
     const value = tokens[i + 1];
     if (!value || value.startsWith("--")) throw new Error(`${token}의 값이 필요합니다.`);

@@ -14,7 +14,7 @@ export function splitByH2(markdown: string): MarkdownSection[] {
     const heading = line.match(/^##\s+(.+)$/);
     if (heading) {
       if (current) sections.push(current);
-      current = { title: heading[1].trim(), body: "" };
+      current = { title: heading[1]!.trim(), body: "" };
       continue;
     }
     if (current) current.body += `${line}\n`;

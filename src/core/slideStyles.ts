@@ -54,7 +54,7 @@ function parsePreset(fileName: string, raw: string): SlideStylePreset {
     return { id: fallbackId, fileName, title: extractHeadingTitle(raw) || fallbackId, body: raw };
   }
 
-  const frontmatter = (yaml.load(match[1]) as { style_id?: string; title?: string }) || {};
+  const frontmatter = (yaml.load(match[1]!) as { style_id?: string; title?: string }) || {};
   const body = raw.slice(match[0].length);
   return {
     id: frontmatter.style_id || fallbackId,
@@ -66,7 +66,7 @@ function parsePreset(fileName: string, raw: string): SlideStylePreset {
 
 function extractHeadingTitle(body: string): string | null {
   const headingMatch = body.match(/^##\s+(.+)$/m);
-  if (headingMatch) return headingMatch[1].trim();
+  if (headingMatch) return headingMatch[1]!.trim();
   const firstLine = body.split(/\r?\n/).find((line) => line.trim().length > 0);
   return firstLine ? firstLine.trim().slice(0, 60) : null;
 }

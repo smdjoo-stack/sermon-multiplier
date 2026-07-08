@@ -18,7 +18,7 @@ export function parseSermonNote(content: string): ParsedSermonNote {
 
   // JSON_SCHEMA를 써서 "2026-07-05" 같은 날짜 형식 문자열이 JS Date로 암시적 변환되는 것을 막는다
   // (기본 스키마는 YAML 1.1 타임스탬프 태그를 적용해 date를 "2026-07-05T00:00:00.000Z"로 바꿔버린다).
-  const raw = yaml.load(match[1], { schema: yaml.JSON_SCHEMA });
+  const raw = yaml.load(match[1]!, { schema: yaml.JSON_SCHEMA });
   const parsed = raw && typeof raw === "object" ? (raw as Partial<SermonFrontmatter>) : {};
   const frontmatter = mergeWithDefaults(parsed);
   const body = content.slice(match[0].length);

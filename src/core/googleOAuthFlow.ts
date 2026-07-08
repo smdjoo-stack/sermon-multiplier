@@ -16,6 +16,12 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SCOPES = ["https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/userinfo.email"];
 const OAUTH_TIMEOUT_MS = 120000;
 
+interface GoogleTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+}
+
 export class GoogleOAuthFlow {
   private config: OAuthConfig;
   private server: http.Server | null = null;
@@ -110,7 +116,7 @@ export class GoogleOAuthFlow {
     });
 
     if (!response.ok) throw new Error(`토큰 갱신 실패: ${response.status}`);
-    const data = await response.json();
+    const data = (await response.json()) as GoogleTokenResponse;
     return {
       accessToken: data.access_token,
       refreshToken,
@@ -139,10 +145,10 @@ export class GoogleOAuthFlow {
     });
 
     if (!response.ok) throw new Error(`토큰 교환 실패: ${response.status}`);
-    const data = await response.json();
+    const data = (await response.json()) as GoogleTokenResponse;
     return {
       accessToken: data.access_token,
-      refreshToken: data.refresh_token,
+      refreshToken: data.refresh_token || "",
       expiresIn: data.expires_in,
       expiresAt: Date.now() + data.expires_in * 1000,
     };
@@ -184,7 +190,7 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 
 function base64UrlEncode(buffer: Uint8Array): string {
   let binary = "";
-  for (let i = 0; i < buffer.length; i++) binary += String.fromCharCode(buffer[i]);
+  for (let i = 0; i < buffer.length; i++) binary += String.fromCharCode(buffer[i]!);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 

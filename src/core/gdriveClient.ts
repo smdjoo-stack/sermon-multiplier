@@ -9,6 +9,15 @@ const API_URL = "https://www.googleapis.com/drive/v3";
 const UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3";
 export const DEFAULT_OAUTH_REDIRECT_PORT = 8787;
 
+interface DriveFileResponse {
+  id: string;
+  webViewLink?: string;
+}
+
+interface DriveFileListResponse {
+  files?: Array<{ id: string }>;
+}
+
 export interface GoogleDriveConfig {
   clientId: string;
   clientSecret: string;
@@ -83,8 +92,8 @@ export class GoogleDriveUploader {
     });
 
     if (!uploadResponse.ok) throw new Error(`Google Drive 업로드 실패: ${uploadResponse.status}`);
-    const fileData = await uploadResponse.json();
-    const fileId = fileData.id as string;
+    const fileData = (await uploadResponse.json()) as DriveFileResponse;
+    const fileId = fileData.id;
 
     await this.makeFilePublic(fileId);
     const fileInfo = await this.getFileInfo(fileId);
@@ -116,7 +125,7 @@ export class GoogleDriveUploader {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!response.ok) return {};
-    return response.json();
+    return (await response.json()) as DriveFileResponse;
   }
 
   private async ensureFolder(folderPath: string): Promise<string> {
@@ -136,7 +145,7 @@ export class GoogleDriveUploader {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!response.ok) return null;
-    const data = await response.json();
+    const data = (await response.json()) as DriveFileListResponse;
     return data.files?.[0]?.id || null;
   }
 
@@ -148,7 +157,7 @@ export class GoogleDriveUploader {
       body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", parents: [parentId] }),
     });
     if (!response.ok) throw new Error(`Drive 폴더 생성 실패: ${response.status}`);
-    const data = await response.json();
+    const data = (await response.json()) as DriveFileResponse;
     return data.id;
   }
 
@@ -197,5 +206,5 @@ export function driveFilePreviewUrl(fileId: string): string {
 // webViewLink(예: https://drive.google.com/file/d/FILE_ID/view)에서 fileId만 추출한다.
 export function extractDriveFileId(webViewLink: string): string | null {
   const match = webViewLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
+  return match ? match[1]! : null;
 }

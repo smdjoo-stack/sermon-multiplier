@@ -142,7 +142,7 @@ function renderMarkdownFragment(markdown: string): string {
         flushList();
         listTag = "ul";
       }
-      listItems.push(renderInline(unordered[1]));
+      listItems.push(renderInline(unordered[1]!));
       continue;
     }
     if (ordered) {
@@ -150,7 +150,7 @@ function renderMarkdownFragment(markdown: string): string {
         flushList();
         listTag = "ol";
       }
-      listItems.push(renderInline(ordered[1]));
+      listItems.push(renderInline(ordered[1]!));
       continue;
     }
     flushList();

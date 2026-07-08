@@ -37,7 +37,7 @@ export async function resolveAiCommand(provider: AiProviderId, aiCommand: string
   if (aiCommand.trim()) return aiCommand;
 
   const config = AI_CLI_PROVIDERS[provider];
-  const executable = (await findExecutable(config.names)) || config.names[0];
+  const executable = (await findExecutable(config.names)) || config.names[0]!;
   return `${quoteShell(executable)} ${config.args}`;
 }
 

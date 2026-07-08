@@ -28,12 +28,28 @@ export interface McpSession {
   stop(): void;
 }
 
+interface JsonRpcIncomingMessage {
+  jsonrpc?: string;
+  id?: number;
+  result?: McpToolCallResult;
+  error?: { code: number; message: string };
+}
+
+interface McpToolCallResult {
+  structuredContent?: Record<string, unknown>;
+  content?: Array<{ type?: string; text?: string }>;
+  [key: string]: unknown;
+}
+
 export function createNotebookLmSession(command: string, timeoutMs: number): McpSession {
   let child: ChildProcessWithoutNullStreams | null = null;
   let stdout = "";
   let stderr = "";
   let nextId = 1;
-  const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+  const pending = new Map<
+    number,
+    { resolve: (value: McpToolCallResult | undefined) => void; reject: (error: Error) => void }
+  >();
 
   function start(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -67,18 +83,18 @@ export function createNotebookLmSession(command: string, timeoutMs: number): Mcp
           write({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
           resolve();
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           clearTimeout(timer);
-          reject(error);
+          reject(error instanceof Error ? error : new Error(String(error)));
         });
     });
   }
 
   function callTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
-    return send("tools/call", { name, arguments: args }).then((result: any) => normalizeToolResult<T>(result));
+    return send("tools/call", { name, arguments: args }).then((result) => normalizeToolResult<T>(result));
   }
 
-  function send(method: string, params: Record<string, unknown>): Promise<unknown> {
+  function send(method: string, params: Record<string, unknown>): Promise<McpToolCallResult | undefined> {
     if (!child) return Promise.reject(new Error("NotebookLM MCP 세션이 시작되지 않았습니다."));
     const id = nextId++;
     const timer = setTimeout(() => {
@@ -86,7 +102,7 @@ export function createNotebookLmSession(command: string, timeoutMs: number): Mcp
       reject(new Error(`NotebookLM MCP 응답 시간 초과(${method}): ${stderr.trim() || command}`));
     }, timeoutMs);
     let reject!: (error: Error) => void;
-    const promise = new Promise<unknown>((resolve, rejectPromise) => {
+    const promise = new Promise<McpToolCallResult | undefined>((resolve, rejectPromise) => {
       reject = rejectPromise;
       pending.set(id, {
         resolve: (value) => {
@@ -114,10 +130,10 @@ export function createNotebookLmSession(command: string, timeoutMs: number): Mcp
       stdout = stdout.slice(newline + 1);
       if (line) {
         try {
-          const message = JSON.parse(line);
-          const waiter = pending.get(message.id);
+          const message = JSON.parse(line) as JsonRpcIncomingMessage;
+          const waiter = message.id === undefined ? undefined : pending.get(message.id);
           if (waiter) {
-            pending.delete(message.id);
+            pending.delete(message.id!);
             if (message.error) waiter.reject(new Error(message.error.message || JSON.stringify(message.error)));
             else waiter.resolve(message.result);
           }
@@ -136,12 +152,15 @@ export function createNotebookLmSession(command: string, timeoutMs: number): Mcp
   return { start, callTool, stop };
 }
 
-function normalizeToolResult<T>(result: any): T {
+function normalizeToolResult<T>(result: McpToolCallResult | undefined): T {
   if (result?.structuredContent && Object.keys(result.structuredContent).length) {
     return result.structuredContent as T;
   }
   const text = Array.isArray(result?.content)
-    ? result.content.map((item: any) => (item?.type === "text" ? item.text : "")).join("\n").trim()
+    ? result.content
+        .map((item) => (item?.type === "text" ? item.text || "" : ""))
+        .join("\n")
+        .trim()
     : "";
   if (text) {
     try {
@@ -202,8 +221,11 @@ export async function generateNotebookLmOutputs(
       if (request.kind === "slides" && request.slideStyleText) {
         options.focus_prompt = request.slideStyleText;
       }
-      const created = await session.callTool<{ artifact_id?: string; status?: string }>("studio_create", options);
-      if (created.status === "error") throw new Error(String((created as any).error || "studio_create 실패"));
+      const created = await session.callTool<{ artifact_id?: string; status?: string; error?: string }>(
+        "studio_create",
+        options,
+      );
+      if (created.status === "error") throw new Error(created.error || "studio_create 실패");
       if (created.artifact_id) artifactIds[request.kind] = created.artifact_id;
     } catch (error) {
       results.push({ kind: request.kind, status: "error", error: describeError(error) });

@@ -53,13 +53,13 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("연결 상태").setHeading();
     containerEl.createDiv({ text: connected ? "✅ Google Drive에 연결되어 있습니다." : "❌ 연결되어 있지 않습니다." });
     containerEl.createEl("p", {
-      text: "Client ID/Secret과 토큰은 옵시디언 data.json이 아니라 ~/.sermon-multiplier.env(파일 권한 600)에 저장됩니다.",
+      text: "Client ID/secret과 토큰은 옵시디언 data.json이 아니라 ~/.sermon-multiplier.env(파일 권한 600)에 저장됩니다.",
       cls: "setting-item-description",
     });
 
     new Setting(containerEl)
       .setName("Client ID")
-      .setDesc("Google Cloud Console에서 발급한 OAuth 클라이언트 ID (Desktop app)")
+      .setDesc("Google Cloud Console에서 발급한 OAuth 클라이언트 ID (desktop app)")
       .addText((text) =>
         text
           .setPlaceholder("xxx.apps.googleusercontent.com")
@@ -70,7 +70,7 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Client Secret")
+      .setName("Client secret")
       .setDesc("GOCSPX-로 시작하는 값입니다.")
       .addText((text) =>
         text
@@ -105,7 +105,7 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
             }
             const flow = buildDriveUploader(secrets, async () => {});
             if (!flow) {
-              new Notice("먼저 Client ID/Secret을 입력하세요.");
+              new Notice("먼저 client ID/secret을 입력하세요.");
               return;
             }
             try {
@@ -158,7 +158,7 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
     const providers: AiProviderId[] = ["antigravity", "claude", "gemini", "codex", "grok", "custom"];
 
     new Setting(containerEl)
-      .setName("AI Provider")
+      .setName("AI provider")
       .setDesc("설교문 요약/큐티/성경공부자료를 생성할 로컬 CLI. 이미 로그인된 CLI를 그대로 사용합니다.")
       .addDropdown((dropdown) => {
         for (const provider of providers) dropdown.addOption(provider, provider);
@@ -170,7 +170,7 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("사용자 지정 명령 (선택)")
-      .setDesc('비워두면 Provider별 기본 명령을 자동 탐색합니다. custom Provider를 쓰려면 필수입니다. 예: "my-cli -p"')
+      .setDesc('비워두면 provider별 기본 명령을 자동 탐색합니다. custom provider를 쓰려면 필수입니다. 예: "my-cli -p"')
       .addText((text) =>
         text.setValue(settings.aiCommand).onChange(async (value) => {
           settings.aiCommand = value.trim();
@@ -194,7 +194,6 @@ export class SermonMultiplierSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName(label).setHeading();
     const textarea = containerEl.createEl("textarea", { cls: "sermon-multiplier-prompt-textarea" });
     textarea.rows = 6;
-    textarea.style.width = "100%";
     textarea.value = settings.promptTemplates[key];
     textarea.addEventListener("change", () => {
       void (async () => {

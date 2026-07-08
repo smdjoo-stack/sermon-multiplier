@@ -1,13 +1,13 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
+import { builtinModules } from "node:module";
 
 const prod = process.argv[2] === "production";
 
 const context = await esbuild.context({
   entryPoints: ["src/cli.ts"],
   bundle: true,
-  external: [...builtins],
+  external: [...builtinModules],
   platform: "node",
   format: "esm",
   target: "node20",
@@ -15,6 +15,7 @@ const context = await esbuild.context({
   sourcemap: prod ? false : "inline",
   treeShaking: true,
   outfile: "dist/cli.mjs",
+  minify: prod,
   loader: { ".html": "text", ".md": "text" },
 });
 

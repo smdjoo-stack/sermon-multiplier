@@ -79,7 +79,7 @@ export default class SermonMultiplierPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const saved = await this.loadData();
+    const saved = (await this.loadData()) as Partial<SermonMultiplierSettings> | null;
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...saved,

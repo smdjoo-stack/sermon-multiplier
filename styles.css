@@ -93,6 +93,14 @@
   background: var(--background-modifier-hover);
 }
 
+.sermon-multiplier-hidden {
+  display: none;
+}
+
+.sermon-multiplier-prompt-textarea {
+  width: 100%;
+}
+
 .sermon-multiplier-log {
   max-height: 160px;
   overflow-y: auto;
