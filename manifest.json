@@ -1,7 +1,7 @@
 {
 	"id": "sermon-multiplier",
 	"name": "Sermon Multiplier",
-	"version": "0.1.13",
+	"version": "0.1.14",
 	"minAppVersion": "1.5.0",
 	"description": "설교 노트 하나로 인포그래픽·슬라이드·영상·음성(NotebookLM)과 설교문 요약·큐티·성경공부자료(로컬 AI CLI)를 생성하고, 통합 랜딩페이지까지 만들어 옵시디언 노트에 되써넣습니다.",
 	"author": "김태주",

@@ -13,10 +13,13 @@ import { SermonMultiplierSettingTab } from "./obsidian/SettingsTab";
 export default class SermonMultiplierPlugin extends Plugin {
   settings!: SermonMultiplierSettings;
   secrets: DriveSecrets = EMPTY_DRIVE_SECRETS;
-  // 노트 경로 기준으로 실행 중인 파이프라인을 추적한다. runOutputs는 콘솔 모달의 생명주기와
-  // 무관하게 계속 진행되므로(모달을 닫아도 취소되지 않음), 모달을 다시 열었을 때 같은 노트에
-  // 중복 실행을 시작하지 않도록 막는 용도다.
-  private runningNotePaths = new Set<string>();
+  // 같은 노트에 대한 실행은 파일 하나를 여러 파이프라인 호출이 동시에 읽고 쓰면
+  // 서로의 frontmatter 변경을 덮어쓸 수 있어, 노트 단위로 순서대로 처리(대기열)한다.
+  // 산출물별로 버튼을 각각 눌러도 거부되지 않고 차례로 모두 실행된다 — 단, 여러 산출물을
+  // 진짜 동시에 돌리고 싶다면 "전체 생성"처럼 한 번의 호출에 여러 산출물을 함께 넘기면
+  // (로컬 AI 3종은 파이프라인 내부에서 실제로 병렬 실행된다) 된다.
+  private noteQueueTails = new Map<string, Promise<void>>();
+  private noteActiveCounts = new Map<string, number>();
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -136,7 +139,7 @@ export default class SermonMultiplierPlugin extends Plugin {
   }
 
   isRunning(file: TFile): boolean {
-    return this.runningNotePaths.has(file.path);
+    return (this.noteActiveCounts.get(file.path) ?? 0) > 0;
   }
 
   async runOutputs(
@@ -148,17 +151,33 @@ export default class SermonMultiplierPlugin extends Plugin {
     },
     onProgress?: (state: OutputRunState) => void,
   ): Promise<OutputRunState[]> {
-    if (this.runningNotePaths.has(file.path)) {
-      new Notice("⏳ 이 노트는 이미 산출물을 생성하는 중입니다. 완료될 때까지 기다려주세요.");
-      return [];
-    }
-    this.runningNotePaths.add(file.path);
+    const key = file.path;
+    this.noteActiveCounts.set(key, (this.noteActiveCounts.get(key) ?? 0) + 1);
+    const previousTail = this.noteQueueTails.get(key) ?? Promise.resolve();
+
+    let results: OutputRunState[] = [];
+    const task = previousTail
+      .catch(() => {
+        // 대기열 앞 작업이 실패해도 뒤에 대기 중인 작업은 계속 진행한다.
+      })
+      .then(async () => {
+        const ctx = this.buildPipelineContext(file, onProgress);
+        const { results: pipelineResults } = await runPipeline(ctx, { outputs, ...styleOptions });
+        results = pipelineResults;
+      });
+    this.noteQueueTails.set(key, task);
+
     try {
-      const ctx = this.buildPipelineContext(file, onProgress);
-      const { results } = await runPipeline(ctx, { outputs, ...styleOptions });
+      await task;
       return results;
     } finally {
-      this.runningNotePaths.delete(file.path);
+      const remaining = (this.noteActiveCounts.get(key) ?? 1) - 1;
+      if (remaining <= 0) {
+        this.noteActiveCounts.delete(key);
+        this.noteQueueTails.delete(key);
+      } else {
+        this.noteActiveCounts.set(key, remaining);
+      }
     }
   }
 
@@ -176,7 +195,6 @@ export default class SermonMultiplierPlugin extends Plugin {
   }
 
   private notifyResults(results: OutputRunState[]): void {
-    if (results.length === 0) return; // 이미 실행 중이었던 경우 — runOutputs가 자체 안내를 띄운다.
     const failed = results.filter((r) => r.status === "error");
     if (failed.length === 0) {
       new Notice("✅ 생성이 완료되었습니다.");

@@ -25,7 +25,9 @@ export class ConsoleModal extends Modal {
   private styleIds: Partial<Record<"infographic" | "slides", string | null>> = {};
   private styleTexts: Partial<Record<"infographic" | "slides", string | null>> = {};
   private logEl!: HTMLElement;
-  private isRunning = false;
+  // 행(산출물)별로 진행 상태를 따로 추적한다 — 하나로 합쳐두면 요약본이 도는 동안
+  // 큐티/성경공부 버튼을 눌러도 무시되는 버그가 생긴다. "전체 생성"은 "__all__" 키를 쓴다.
+  private runningButtons = new Set<OutputKind | "__all__">();
 
   constructor(app: App, plugin: SermonMultiplierPlugin, file: TFile) {
     super(app);
@@ -189,8 +191,8 @@ export class ConsoleModal extends Modal {
   };
 
   private async runSingle(kind: OutputKind, button: HTMLButtonElement): Promise<void> {
-    if (this.isRunning) return;
-    this.isRunning = true;
+    if (this.runningButtons.has(kind)) return;
+    this.runningButtons.add(kind);
     button.disabled = true;
     try {
       const results = await this.plugin.runOutputs(
@@ -199,19 +201,18 @@ export class ConsoleModal extends Modal {
         { styleIds: this.styleIds, styleTexts: this.styleTexts },
         this.onProgress,
       );
-      if (results.length === 0) return; // 이미 실행 중이었던 경우 — plugin.runOutputs가 자체 안내를 띄운다.
       const failed = results.find((r) => r.kind === kind && r.status === "error");
       if (failed) new Notice(`❌ ${OUTPUT_LABELS[kind]} 생성 실패: ${failed.message}`);
       else new Notice(`✅ ${OUTPUT_LABELS[kind]} 생성 완료`);
     } finally {
       button.disabled = false;
-      this.isRunning = false;
+      this.runningButtons.delete(kind);
     }
   }
 
   private async runAll(button: HTMLButtonElement): Promise<void> {
-    if (this.isRunning) return;
-    this.isRunning = true;
+    if (this.runningButtons.has("__all__")) return;
+    this.runningButtons.add("__all__");
     button.disabled = true;
     try {
       const results = await this.plugin.runOutputs(
@@ -220,13 +221,12 @@ export class ConsoleModal extends Modal {
         { styleIds: this.styleIds, styleTexts: this.styleTexts },
         this.onProgress,
       );
-      if (results.length === 0) return; // 이미 실행 중이었던 경우 — plugin.runOutputs가 자체 안내를 띄운다.
       const failedCount = results.filter((r) => r.status === "error").length;
       if (failedCount === 0) new Notice("✅ 전체 생성이 완료되었습니다.");
       else new Notice(`⚠️ ${failedCount}건은 실패했습니다. 로그를 확인하세요.`);
     } finally {
       button.disabled = false;
-      this.isRunning = false;
+      this.runningButtons.delete("__all__");
     }
   }
 

@@ -83,24 +83,32 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
   const localKinds = options.outputs.filter(
     (kind): kind is "summary" | "qt" | "bible_study" => LOCAL_AI_OUTPUTS.includes(kind),
   );
-  for (const kind of localKinds) {
-    ctx.onProgress?.({ kind, status: "generating" });
-    try {
+  // 로컬 AI 3종(요약/큐티/성경공부)은 서로 독립적인 CLI 호출이라 병렬로 실행한다
+  // (NotebookLM 산출물과 달리 공유 세션 문제가 없다). 파일 쓰기는 산출물별로 다른 파일이라 안전하고,
+  // frontmatter/body 변경만 결과가 모두 모인 뒤 순차적으로 적용해 경쟁 상태를 피한다.
+  for (const kind of localKinds) ctx.onProgress?.({ kind, status: "generating" });
+  const localOutcomes = await Promise.allSettled(
+    localKinds.map(async (kind) => {
       const template = resolvePromptTemplate(kind, ctx.settings.promptTemplates);
       const prompt = renderPrompt(template, frontmatter, originalBody);
       const command = await resolveAiCommand(ctx.settings.aiProvider, ctx.settings.aiCommand);
       const content = await runAiCommand(command, prompt, ctx.settings.aiCliTimeoutSeconds);
-
       const fileName = LOCAL_OUTPUT_FILE[kind];
       await writeFile(join(noteDirAbs, fileName), `${content.trim()}\n`, "utf8");
-
+      return fileName;
+    }),
+  );
+  localKinds.forEach((kind, index) => {
+    const outcome = localOutcomes[index]!;
+    if (outcome.status === "fulfilled") {
+      const fileName = outcome.value;
       frontmatter = { ...frontmatter, outputs: { ...frontmatter.outputs, [kind]: fileName } };
       body = upsertOutputSection(body, kind, generateWikilink(fileName.replace(/\.md$/, "")));
       emit({ kind, status: "complete", link: fileName });
-    } catch (error) {
-      emit({ kind, status: "error", message: describeError(error) });
+    } else {
+      emit({ kind, status: "error", message: describeError(outcome.reason) });
     }
-  }
+  });
 
   const nlmKinds = options.outputs.filter(
     (kind): kind is "infographic" | "slides" | "video" | "audio" => NOTEBOOKLM_OUTPUTS.includes(kind),
