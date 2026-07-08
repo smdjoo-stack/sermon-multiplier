@@ -3,7 +3,7 @@
 // 로컬 파일 경로(fs)를 입력으로 받는다 — NotebookLM에서 다운로드한 파일을 그대로 올리기 위함.
 import { readFile } from "node:fs/promises";
 import { GoogleOAuthFlow, OAuthConfig } from "./googleOAuthFlow";
-import { DriveUploadResult, OAuthTokens } from "../types";
+import { DriveSecrets, DriveUploadResult, OAuthTokens } from "../types";
 
 const API_URL = "https://www.googleapis.com/drive/v3";
 const UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3";
@@ -165,10 +165,37 @@ export class GoogleDriveUploader {
   }
 }
 
+// 플러그인/CLI/MCP가 공통으로 쓰는 팩토리. openUrl은 실행 환경마다 다르다
+// (옵시디언은 electron shell.openExternal, CLI는 시스템 기본 브라우저 오픈 명령).
+export function createDriveUploader(
+  secrets: DriveSecrets,
+  openUrl: (url: string) => Promise<void> | void,
+  onTokenRefresh: (tokens: OAuthTokens) => Promise<void> | void,
+): GoogleDriveUploader | null {
+  if (!secrets.googleClientId || !secrets.googleClientSecret) return null;
+  return new GoogleDriveUploader(
+    {
+      clientId: secrets.googleClientId,
+      clientSecret: secrets.googleClientSecret,
+      accessToken: secrets.googleAccessToken,
+      refreshToken: secrets.googleRefreshToken,
+      tokenExpiresAt: secrets.tokenExpiresAt,
+      onTokenRefresh,
+    },
+    { redirectPort: DEFAULT_OAUTH_REDIRECT_PORT, openUrl },
+  );
+}
+
 function escapeDriveQueryValue(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
 export function driveFilePreviewUrl(fileId: string): string {
   return `https://drive.google.com/file/d/${fileId}/preview`;
+}
+
+// webViewLink(예: https://drive.google.com/file/d/FILE_ID/view)에서 fileId만 추출한다.
+export function extractDriveFileId(webViewLink: string): string | null {
+  const match = webViewLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
 }

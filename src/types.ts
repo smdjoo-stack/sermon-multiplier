@@ -121,13 +121,26 @@ export interface SlideStylePreset {
   body: string;
 }
 
-export interface SermonMultiplierSettings {
-  // Google Drive OAuth
+// Google OAuth Client ID/Secret, 토큰은 절대 옵시디언 data.json에 저장하지 않는다.
+// Vault 동기화(iCloud/Git 등)로 인한 유출을 막기 위해 ~/.sermon-multiplier.env(파일 권한 600)에
+// 별도 보관한다 — src/core/secretsStore.ts 참고.
+export interface DriveSecrets {
   googleClientId: string;
   googleClientSecret: string;
   googleAccessToken: string;
   googleRefreshToken: string;
   tokenExpiresAt: number;
+}
+
+export const EMPTY_DRIVE_SECRETS: DriveSecrets = {
+  googleClientId: "",
+  googleClientSecret: "",
+  googleAccessToken: "",
+  googleRefreshToken: "",
+  tokenExpiresAt: 0,
+};
+
+export interface SermonMultiplierSettings {
   driveFolderRoot: string;
   autoShareLink: boolean;
 
@@ -149,11 +162,6 @@ export interface SermonMultiplierSettings {
 }
 
 export const DEFAULT_SETTINGS: SermonMultiplierSettings = {
-  googleClientId: "",
-  googleClientSecret: "",
-  googleAccessToken: "",
-  googleRefreshToken: "",
-  tokenExpiresAt: 0,
   driveFolderRoot: "설교자료",
   autoShareLink: true,
 

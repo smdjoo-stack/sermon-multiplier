@@ -5,7 +5,7 @@
 //   notebook_create, source_add, studio_create, studio_status, download_artifact
 import { spawn, ChildProcessWithoutNullStreams } from "node:child_process";
 import { mkdir } from "node:fs/promises";
-import { NOTEBOOKLM_OUTPUTS, OutputKind } from "../types";
+import { OutputKind } from "../types";
 
 // 우리 산출물 이름 -> notebooklm-mcp-cli의 artifact_type 값
 const ARTIFACT_TYPE: Record<"infographic" | "slides" | "video" | "audio", string> = {
@@ -298,8 +298,4 @@ function delay(ms: number): Promise<void> {
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-export function isNotebookLmOutput(kind: OutputKind): boolean {
-  return (NOTEBOOKLM_OUTPUTS as string[]).includes(kind);
 }

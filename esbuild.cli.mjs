@@ -15,6 +15,7 @@ const context = await esbuild.context({
   sourcemap: prod ? false : "inline",
   treeShaking: true,
   outfile: "dist/cli.mjs",
+  loader: { ".html": "text", ".md": "text" },
 });
 
 if (prod) {
