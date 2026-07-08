@@ -18,6 +18,22 @@ interface DriveFileListResponse {
   files?: Array<{ id: string }>;
 }
 
+interface DriveErrorResponse {
+  error?: { code?: number; message?: string; status?: string };
+}
+
+// 응답 상태 코드만으로는 원인을 알 수 없으므로(예: 403은 API 미활성화/권한부족/할당량초과 모두 가능),
+// Google이 보낸 실제 에러 메시지를 최대한 그대로 노출한다.
+async function describeDriveError(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as DriveErrorResponse;
+    if (body.error?.message) return `${response.status} ${body.error.message}`;
+  } catch {
+    // 응답 본문이 JSON이 아니면 상태 코드만 사용한다.
+  }
+  return String(response.status);
+}
+
 export interface GoogleDriveConfig {
   clientId: string;
   clientSecret: string;
@@ -91,7 +107,7 @@ export class GoogleDriveUploader {
       body: multipartBody,
     });
 
-    if (!uploadResponse.ok) throw new Error(`Google Drive 업로드 실패: ${uploadResponse.status}`);
+    if (!uploadResponse.ok) throw new Error(`Google Drive 업로드 실패: ${await describeDriveError(uploadResponse)}`);
     const fileData = (await uploadResponse.json()) as DriveFileResponse;
     const fileId = fileData.id;
 
@@ -156,7 +172,7 @@ export class GoogleDriveUploader {
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", parents: [parentId] }),
     });
-    if (!response.ok) throw new Error(`Drive 폴더 생성 실패: ${response.status}`);
+    if (!response.ok) throw new Error(`Drive 폴더 생성 실패: ${await describeDriveError(response)}`);
     const data = (await response.json()) as DriveFileResponse;
     return data.id;
   }
