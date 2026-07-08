@@ -217,7 +217,13 @@ export async function generateNotebookLmOutputs(
   for (const request of requests) {
     try {
       const artifactType = ARTIFACT_TYPE[request.kind];
-      const options: Record<string, unknown> = { notebook_id: notebookId, artifact_type: artifactType, confirm: true };
+      // language를 지정하지 않으면 NOTEBOOKLM_HL 환경변수 또는 영어(en)로 기본 생성되므로 명시한다.
+      const options: Record<string, unknown> = {
+        notebook_id: notebookId,
+        artifact_type: artifactType,
+        confirm: true,
+        language: "ko",
+      };
       if (request.kind === "slides" && request.slideStyleText) {
         options.focus_prompt = request.slideStyleText;
       }
