@@ -1,0 +1,29 @@
+{
+  "name": "sermon-multiplier",
+  "version": "0.1.0",
+  "description": "설교 노트 기반 통합 목회자료 생성 플러그인 (Obsidian plugin + CLI + MCP server)",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "sermon-multiplier": "./bin/sermon-multiplier.mjs"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs production && node esbuild.cli.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit --skipLibCheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.21.5",
+    "obsidian": "latest",
+    "typescript": "^5.4.5"
+  }
+}

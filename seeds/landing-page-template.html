@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}} | 설교 산출물</title>
+<style>
+  :root{
+    --bg:#faf7f2;
+    --surface:#ffffff;
+    --border:#e7e0d4;
+    --text:#2b2620;
+    --text-2:#6b6255;
+    --text-3:#9a8f7d;
+    --accent:#8a5a3b;
+    --accent-bg:#f3e6da;
+    --nav-h:56px;
+  }
+  [data-theme="dark"]{
+    --bg:#1c1815;
+    --surface:#25201b;
+    --border:#3a332a;
+    --text:#f0ebe2;
+    --text-2:#c2b8a8;
+    --text-3:#8c8172;
+    --accent:#e0a877;
+    --accent-bg:#3a2c1f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.7;
+  }
+  a{color:var(--accent);}
+  nav.top{
+    position:sticky;top:0;z-index:50;
+    height:var(--nav-h);
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;
+    padding:0 16px;
+    overflow-x:auto;
+    white-space:nowrap;
+    gap:4px;
+  }
+  nav.top a{
+    font-size:13px;color:var(--text-2);text-decoration:none;
+    padding:8px 12px;border-radius:8px;
+  }
+  nav.top a:hover{background:var(--accent-bg);color:var(--accent);}
+  .theme-toggle{
+    margin-left:auto;flex-shrink:0;
+    border:1px solid var(--border);background:var(--surface);color:var(--text-2);
+    border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;
+  }
+  .hero{
+    padding:40px 20px 32px;text-align:center;
+    border-bottom:1px solid var(--border);
+  }
+  .hero .badge{
+    display:inline-block;font-size:12px;color:var(--accent);
+    background:var(--accent-bg);padding:4px 12px;border-radius:999px;margin-bottom:12px;
+  }
+  .hero h1{font-size:26px;font-weight:700;margin:0 0 8px;}
+  .hero .meta{font-size:14px;color:var(--text-2);}
+  main{max-width:720px;margin:0 auto;padding:0 20px 60px;}
+  section{padding:36px 0;border-bottom:1px solid var(--border);scroll-margin-top:calc(var(--nav-h) + 12px);}
+  section:last-child{border-bottom:none;}
+  section h2{
+    font-size:18px;font-weight:700;margin:0 0 4px;
+    display:flex;align-items:center;gap:8px;
+  }
+  section .icon{
+    width:28px;height:28px;border-radius:8px;background:var(--accent-bg);color:var(--accent);
+    display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;
+  }
+  section .desc{font-size:13px;color:var(--text-3);margin:0 0 18px;}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:20px;
+  }
+  .empty-state{
+    background:var(--surface);border:1px dashed var(--border);border-radius:14px;
+    padding:24px;text-align:center;color:var(--text-3);font-size:13px;
+  }
+  .infographic-box{
+    aspect-ratio:4/5;max-width:340px;margin:0 auto;
+    border-radius:14px;
+    background:
+      radial-gradient(circle at 30% 20%, var(--accent-bg), transparent 60%),
+      var(--surface);
+    border:1px solid var(--border);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;color:var(--text-3);font-size:13px;
+  }
+  .infographic-box .big{font-size:32px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:13px;padding:9px 16px;border-radius:10px;
+    border:1px solid var(--border);background:var(--surface);color:var(--text);
+    text-decoration:none;cursor:pointer;
+  }
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .actions{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+  .summary-text p{margin:0 0 14px;font-size:15px;}
+  .summary-text .point{
+    background:var(--accent-bg);color:var(--accent);
+    border-radius:10px;padding:12px 16px;font-size:14px;margin:16px 0;
+  }
+  .frame-16-9{
+    position:relative;width:100%;padding-top:56.25%;
+    background:#111;border-radius:14px;overflow:hidden;
+  }
+  .frame-16-9 iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .frame-16-9 .fill{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#cfc9bf;font-size:13px;flex-direction:column;gap:10px;
+  }
+  .play-circle{
+    width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.12);
+    display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;
+  }
+  .slide-frame{
+    background:#111;border-radius:14px;aspect-ratio:16/10;
+    display:flex;align-items:center;justify-content:center;color:#cfc9bf;font-size:13px;
+    position:relative;overflow:hidden;
+  }
+  .slide-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .audio-player{
+    background:var(--surface);
+    border:1px solid var(--border);border-radius:14px;padding:12px;
+  }
+  .audio-player iframe{width:100%;height:100px;border:0;border-radius:8px;}
+  .qt-tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .qt-tabs button{
+    flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-2);font-size:13px;cursor:pointer;
+  }
+  .qt-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .qt-day{display:none;}
+  .qt-day.active{display:block;}
+  .qt-block{margin-bottom:16px;}
+  .qt-block h3{font-size:14px;margin:0 0 6px;color:var(--text-2);font-weight:700;}
+  .qt-block ol,.qt-block ul,.study-block ol,.study-block ul{margin:0;padding-left:20px;font-size:14px;}
+  .qt-block li,.study-block li{margin-bottom:6px;}
+  .qt-block p,.study-block p{font-size:14px;margin:0 0 8px;}
+  .study-block{margin-bottom:18px;}
+  .study-block h3{font-size:14px;margin:0 0 8px;color:var(--accent);font-weight:700;}
+  footer{
+    text-align:center;padding:28px 20px 40px;font-size:12px;color:var(--text-3);
+  }
+  @media (max-width:480px){
+    .hero h1{font-size:21px;}
+    section{padding:28px 0;}
+  }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <a href="#infographic">인포그래픽</a>
+  <a href="#summary">설교요약</a>
+  <a href="#slides">슬라이드</a>
+  <a href="#video">영상</a>
+  <a href="#audio">음성</a>
+  <a href="#qt">큐티</a>
+  <a href="#study">성경공부</a>
+  <button class="theme-toggle" onclick="document.documentElement.toggleAttribute('data-theme')">다크모드</button>
+</nav>
+
+<div class="hero">
+  <span class="badge">{{SERIES}}</span>
+  <h1>{{TITLE}}</h1>
+  <div class="meta">{{SCRIPTURE}} · {{DATE}}</div>
+</div>
+
+<main>
+
+  <section id="infographic">
+    <h2><span class="icon">🖼</span>인포그래픽</h2>
+    <p class="desc">본문의 핵심 흐름을 한 장으로 정리했습니다.</p>
+    <!--INFOGRAPHIC_CONTENT--><!--/INFOGRAPHIC_CONTENT-->
+  </section>
+
+  <section id="summary">
+    <h2><span class="icon">📝</span>설교문 요약</h2>
+    <p class="desc">전체 설교 중 핵심 대지와 적용점만 정리한 요약본입니다.</p>
+    <!--SUMMARY_CONTENT--><!--/SUMMARY_CONTENT-->
+  </section>
+
+  <section id="slides">
+    <h2><span class="icon">📊</span>슬라이드</h2>
+    <p class="desc">소그룹·주일학교에서 바로 쓸 수 있는 슬라이드 자료입니다.</p>
+    <!--SLIDES_CONTENT--><!--/SLIDES_CONTENT-->
+  </section>
+
+  <section id="video">
+    <h2><span class="icon">🎬</span>영상자료</h2>
+    <p class="desc">설교 내용을 요약한 영상입니다.</p>
+    <!--VIDEO_CONTENT--><!--/VIDEO_CONTENT-->
+  </section>
+
+  <section id="audio">
+    <h2><span class="icon">🎧</span>음성자료</h2>
+    <p class="desc">이동 중에도 들을 수 있는 오디오 오버뷰입니다.</p>
+    <!--AUDIO_CONTENT--><!--/AUDIO_CONTENT-->
+  </section>
+
+  <section id="qt">
+    <h2><span class="icon">📖</span>개인 큐티 (2일)</h2>
+    <p class="desc">이번 주 본문을 이틀에 걸쳐 개인적으로 묵상합니다.</p>
+    <!--QT_CONTENT--><!--/QT_CONTENT-->
+  </section>
+
+  <section id="study">
+    <h2><span class="icon">👥</span>성경공부자료</h2>
+    <p class="desc">40~60분 소그룹 모임용 나눔 질문입니다.</p>
+    <!--STUDY_CONTENT--><!--/STUDY_CONTENT-->
+  </section>
+
+</main>
+
+<footer>
+  설교 멀티산출물 플러그인으로 생성됨 · 원본 노트: {{NOTE_FILENAME}} · 생성 시각: {{GENERATED_AT}}
+</footer>
+
+<script>
+function showDay(n, btn){
+  document.querySelectorAll('.qt-day').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('qt-day-' + n).classList.add('active');
+  document.querySelectorAll('.qt-tabs button').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>

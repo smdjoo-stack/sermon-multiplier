@@ -1,0 +1,105 @@
+.sermon-multiplier-modal {
+  width: min(640px, 90vw);
+}
+
+.sermon-multiplier-title {
+  margin-bottom: 4px;
+}
+
+.sermon-multiplier-subtitle {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.sermon-multiplier-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.sermon-multiplier-row.is-landing {
+  margin-top: 12px;
+  border-style: dashed;
+}
+
+.sermon-multiplier-row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.sermon-multiplier-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sermon-multiplier-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.sermon-multiplier-badge.status-waiting {
+  color: var(--text-muted);
+}
+
+.sermon-multiplier-badge.status-generating {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+.sermon-multiplier-badge.status-complete {
+  color: var(--text-success, #3fb950);
+  border-color: var(--text-success, #3fb950);
+}
+
+.sermon-multiplier-badge.status-error {
+  color: var(--text-error, #e5534b);
+  border-color: var(--text-error, #e5534b);
+}
+
+.sermon-multiplier-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.sermon-multiplier-size-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.sermon-multiplier-size-option {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.sermon-multiplier-size-option.is-selected {
+  border-color: var(--text-accent);
+  background: var(--background-modifier-hover);
+}
+
+.sermon-multiplier-log {
+  max-height: 160px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: 12px;
+  padding-top: 8px;
+  white-space: pre-wrap;
+}
