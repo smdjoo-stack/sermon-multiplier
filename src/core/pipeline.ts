@@ -142,6 +142,7 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
         ctx.settings.notebooklmMaxWaitSeconds * 1000 + 30000,
       );
       const slug = slugifyNotePath(ctx.notePath);
+      let lastAnnouncedMinute = 0;
       try {
         await session.start();
         const nlmResult = await generateNotebookLmOutputs({
@@ -153,6 +154,19 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
           requests,
           downloadDir: join(ctx.vaultPath, ".sermon-multiplier", "tmp", slug),
           maxWaitSeconds: ctx.settings.notebooklmMaxWaitSeconds,
+          onPollTick: (elapsedSeconds) => {
+            // 오래 걸리는 산출물(특히 영상)이 오류 없이 멈춘 것처럼 보이지 않도록 1분 단위로 진행 상황을 알린다.
+            const minute = Math.floor(elapsedSeconds / 60);
+            if (minute === lastAnnouncedMinute) return;
+            lastAnnouncedMinute = minute;
+            for (const kind of nlmKinds) {
+              ctx.onProgress?.({
+                kind,
+                status: "generating",
+                message: `NotebookLM 생성 대기 중... (${minute}분 경과 / 최대 ${Math.round(ctx.settings.notebooklmMaxWaitSeconds / 60)}분)`,
+              });
+            }
+          },
         });
         frontmatter = { ...frontmatter, notebooklm: { notebook_id: nlmResult.notebookId } };
 

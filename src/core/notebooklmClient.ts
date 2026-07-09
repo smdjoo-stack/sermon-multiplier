@@ -24,7 +24,7 @@ const ARTIFACT_FILE: Record<"infographic" | "slides" | "video" | "audio", { ext:
 
 export interface McpSession {
   start(): Promise<void>;
-  callTool<T = Record<string, unknown>>(name: string, args: Record<string, unknown>): Promise<T>;
+  callTool<T = Record<string, unknown>>(name: string, args: Record<string, unknown>, timeoutMsOverride?: number): Promise<T>;
   stop(): void;
 }
 
@@ -90,17 +90,24 @@ export function createNotebookLmSession(command: string, timeoutMs: number): Mcp
     });
   }
 
-  function callTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
-    return send("tools/call", { name, arguments: args }).then((result) => normalizeToolResult<T>(result));
+  function callTool<T>(name: string, args: Record<string, unknown>, timeoutMsOverride?: number): Promise<T> {
+    return send("tools/call", { name, arguments: args }, timeoutMsOverride).then((result) =>
+      normalizeToolResult<T>(result),
+    );
   }
 
-  function send(method: string, params: Record<string, unknown>): Promise<McpToolCallResult | undefined> {
+  function send(
+    method: string,
+    params: Record<string, unknown>,
+    timeoutMsOverride?: number,
+  ): Promise<McpToolCallResult | undefined> {
     if (!child) return Promise.reject(new Error("NotebookLM MCP 세션이 시작되지 않았습니다."));
     const id = nextId++;
+    const effectiveTimeoutMs = timeoutMsOverride ?? timeoutMs;
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error(`NotebookLM MCP 응답 시간 초과(${method}): ${stderr.trim() || command}`));
-    }, timeoutMs);
+    }, effectiveTimeoutMs);
     let reject!: (error: Error) => void;
     const promise = new Promise<McpToolCallResult | undefined>((resolve, rejectPromise) => {
       reject = rejectPromise;
@@ -194,6 +201,7 @@ export interface GenerateNotebookLmOutputsParams {
   requests: NotebookLmArtifactRequest[];
   downloadDir: string;
   maxWaitSeconds: number;
+  onPollTick?: (elapsedSeconds: number) => void; // 폴링마다 경과 시간을 알려 "멈춘 것처럼" 보이지 않게 한다
 }
 
 export interface GenerateNotebookLmOutputsResult {
@@ -204,7 +212,7 @@ export interface GenerateNotebookLmOutputsResult {
 export async function generateNotebookLmOutputs(
   params: GenerateNotebookLmOutputsParams,
 ): Promise<GenerateNotebookLmOutputsResult> {
-  const { session, requests, downloadDir, maxWaitSeconds } = params;
+  const { session, requests, downloadDir, maxWaitSeconds, onPollTick } = params;
   await mkdir(downloadDir, { recursive: true });
 
   const notebookId = params.notebookId || (await createNotebook(session, params.notebookTitle));
@@ -240,7 +248,13 @@ export async function generateNotebookLmOutputs(
 
   // ④ 완료까지 폴링(기본 타임아웃 15분)
   const pending = requests.filter((r) => !results.some((res) => res.kind === r.kind));
-  const finalArtifacts = await pollUntilComplete(session, notebookId, pending.map((r) => r.kind), maxWaitSeconds);
+  const finalArtifacts = await pollUntilComplete(
+    session,
+    notebookId,
+    pending.map((r) => r.kind),
+    maxWaitSeconds,
+    onPollTick,
+  );
 
   // ⑤ 완성 파일을 로컬 다운로드 폴더로 내려받는다.
   for (const request of pending) {
@@ -295,26 +309,42 @@ interface StudioArtifact {
   status: string;
 }
 
+// studio_status 폴링 호출 하나에는 짧은 개별 타임아웃(60초)만 준다 — 세션 전체 타임아웃(기본
+// 15분+)을 그대로 쓰면, 폴링 호출 하나가 응답이 늦거나 멈췄을 때 전체 폴링 루프가 그 호출
+// 하나에 발이 묶여 maxWaitSeconds가 지나도 빠져나오지 못하고(비디오처럼 오래 걸리는 산출물에서
+// "생성 중"으로 보이지만 오류도 없이 멈춘 것처럼 보이는 원인이었다), 남은 예산과 무관하게
+// 훨씬 더 오래 대기하게 된다. 폴링 호출이 실패해도 즉시 포기하지 않고 전체 마감시간까지 재시도한다.
+const POLL_CALL_TIMEOUT_MS = 60000;
+
 async function pollUntilComplete(
   session: McpSession,
   notebookId: string,
   kinds: OutputKind[],
   maxWaitSeconds: number,
+  onPollTick?: (elapsedSeconds: number) => void,
 ): Promise<StudioArtifact[]> {
   const wantedTypes = new Set(kinds.map((k) => ARTIFACT_TYPE[k as "infographic" | "slides" | "video" | "audio"]));
   if (wantedTypes.size === 0) return [];
 
-  const deadline = Date.now() + maxWaitSeconds * 1000;
+  const startedAt = Date.now();
+  const deadline = startedAt + maxWaitSeconds * 1000;
   let last: StudioArtifact[] = [];
   while (Date.now() < deadline) {
-    const status = await session.callTool<{ artifacts?: StudioArtifact[] }>("studio_status", {
-      notebook_id: notebookId,
-      action: "status",
-    });
-    last = status.artifacts || [];
-    const relevant = last.filter((a) => wantedTypes.has(a.type));
-    const allDone = relevant.length >= wantedTypes.size && relevant.every((a) => a.status !== "in_progress");
-    if (allDone) return relevant;
+    onPollTick?.(Math.round((Date.now() - startedAt) / 1000));
+    try {
+      const status = await session.callTool<{ artifacts?: StudioArtifact[] }>(
+        "studio_status",
+        { notebook_id: notebookId, action: "status" },
+        POLL_CALL_TIMEOUT_MS,
+      );
+      last = status.artifacts || [];
+      const relevant = last.filter((a) => wantedTypes.has(a.type));
+      const allDone = relevant.length >= wantedTypes.size && relevant.every((a) => a.status !== "in_progress");
+      if (allDone) return relevant;
+    } catch (error) {
+      // 폴링 호출 하나가 실패해도(타임아웃/일시적 오류) 전체를 포기하지 않고 남은 시간 동안 재시도한다.
+      console.error("studio_status 폴링 실패, 재시도합니다:", describeError(error));
+    }
     await delay(15000);
   }
   return last.filter((a) => wantedTypes.has(a.type));
