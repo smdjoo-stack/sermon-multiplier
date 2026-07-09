@@ -1,7 +1,9 @@
 // 통합 랜딩페이지 생성기 (산출물 8, 설계문서 7장).
-// seeds/landing-page-template.html(프로토타입을 템플릿화한 것)에 실데이터를 바인딩한다.
+// seeds/landing-page-template.html(모바일 카드형 + 색상별 버튼 리스트)에 실데이터를 바인딩한다.
 // 옵시디언 API에 의존하지 않는 순수 정적 HTML(단일 파일, 인라인 CSS/JS)을 만든다.
-import { DriveUploadResult, SermonFrontmatter } from "../types";
+// Drive 산출물(슬라이드/영상/음성)은 "열기 ↗" 외부 링크 버튼으로, 로컬 텍스트 산출물
+// (요약/큐티/성경공부)은 클릭하면 펼쳐지는 <details> 아코디언 버튼으로 표시한다.
+import { DriveUploadResult, OutputKind, SermonFrontmatter } from "../types";
 import { driveFilePreviewUrl } from "./gdriveClient";
 import { splitByH2 } from "./markdown";
 
@@ -17,6 +19,17 @@ export interface LandingPageData {
   bibleStudyMarkdown: string | null;
 }
 
+const ACCENT: Record<OutputKind, string> = {
+  infographic: "accent-summary",
+  summary: "accent-summary",
+  slides: "accent-slides",
+  video: "accent-video",
+  audio: "accent-audio",
+  qt: "accent-qt",
+  bible_study: "accent-study",
+  landing_page: "accent-summary",
+};
+
 export function buildLandingPage(template: string, data: LandingPageData): string {
   const { frontmatter } = data;
 
@@ -28,13 +41,8 @@ export function buildLandingPage(template: string, data: LandingPageData): strin
     .replaceAll("{{NOTE_FILENAME}}", escapeHtml(data.noteFileName))
     .replaceAll("{{GENERATED_AT}}", escapeHtml(new Date().toISOString().slice(0, 16).replace("T", " ")));
 
-  html = replaceMarker(html, "INFOGRAPHIC_CONTENT", buildMediaOrEmpty(data.infographic, "image", "인포그래픽"));
-  html = replaceMarker(html, "SUMMARY_CONTENT", buildSummarySection(data.summaryMarkdown));
-  html = replaceMarker(html, "SLIDES_CONTENT", buildSlidesSection(data.slides));
-  html = replaceMarker(html, "VIDEO_CONTENT", buildVideoSection(data.video));
-  html = replaceMarker(html, "AUDIO_CONTENT", buildAudioSection(data.audio));
-  html = replaceMarker(html, "QT_CONTENT", buildQtSection(data.qtMarkdown));
-  html = replaceMarker(html, "STUDY_CONTENT", buildStudySection(data.bibleStudyMarkdown));
+  html = replaceMarker(html, "INFOGRAPHIC_CONTENT", buildInfographic(data.infographic));
+  html = replaceMarker(html, "OUTPUT_LIST", buildOutputList(data));
 
   return html;
 }
@@ -44,71 +52,59 @@ function replaceMarker(html: string, marker: string, content: string): string {
   return html.replace(pattern, content);
 }
 
-function buildMediaOrEmpty(result: DriveUploadResult | null, _kind: string, label: string): string {
-  if (!result) return emptyState(`${label}이(가) 아직 생성되지 않았습니다.`);
-  return `<div class="infographic-box" style="aspect-ratio:auto;padding:0;overflow:hidden;">
-<iframe src="${driveFilePreviewUrl(result.fileId)}" width="100%" height="420" style="border:0;border-radius:14px;"></iframe>
-</div>
-<div class="actions">
-<a class="btn primary" href="${result.webViewLink}" target="_blank" rel="noreferrer">원본 이미지 열기</a>
-</div>`;
+function buildInfographic(result: DriveUploadResult | null): string {
+  if (!result) return emptyState("인포그래픽이 아직 생성되지 않았습니다.");
+  const previewUrl = driveFilePreviewUrl(result.fileId);
+  return `<a href="${result.webViewLink}" target="_blank" rel="noreferrer">
+<img class="infographic-img" src="https://drive.google.com/thumbnail?id=${result.fileId}&sz=w1000" alt="인포그래픽" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('iframe'),{src:'${previewUrl}',className:'infographic-img',style:'height:360px;border:0;'}));">
+</a>`;
 }
 
-function buildSummarySection(markdown: string | null): string {
-  if (!markdown) return emptyState("설교문 요약본이 아직 생성되지 않았습니다.");
-  const sections = splitByH2(markdown);
-  const body = sections.length ? sections.map((s) => renderMarkdownFragment(s.body)).join("\n") : renderMarkdownFragment(markdown);
-  return `<div class="card summary-text">${body}</div>`;
+function buildOutputList(data: LandingPageData): string {
+  return [
+    accordionButton("summary", "📝 설교문 요약 보기", data.summaryMarkdown, (md) => {
+      const sections = splitByH2(md);
+      return sections.length
+        ? sections.map((s) => renderMarkdownFragment(s.body)).join("\n")
+        : renderMarkdownFragment(md);
+    }),
+    linkButton("slides", "🖥️ 슬라이드 자료", data.slides),
+    linkButton("video", "🎬 영상 자료 보기", data.video),
+    linkButton("audio", "🎧 음성 자료 듣기", data.audio),
+    accordionButton("qt", "🙏 개인 큐티 자료", data.qtMarkdown, (md) => {
+      const sections = splitByH2(md);
+      if (!sections.length) return renderMarkdownFragment(md);
+      return sections
+        .map((s) => `<h3>${escapeHtml(s.title)}</h3>${renderMarkdownFragment(s.body)}`)
+        .join("\n");
+    }),
+    accordionButton("bible_study", "📖 성경 공부 자료", data.bibleStudyMarkdown, (md) => {
+      const sections = splitByH2(md);
+      if (!sections.length) return renderMarkdownFragment(md);
+      return sections
+        .map((s) => `<h3>${escapeHtml(s.title)}</h3>${renderMarkdownFragment(s.body)}`)
+        .join("\n");
+    }),
+  ].join("\n");
 }
 
-function buildSlidesSection(result: DriveUploadResult | null): string {
-  if (!result) return emptyState("슬라이드가 아직 생성되지 않았습니다.");
-  return `<div class="slide-frame">
-<iframe src="${driveFilePreviewUrl(result.fileId)}"></iframe>
-</div>
-<div class="actions">
-<a class="btn primary" href="${result.webViewLink}" target="_blank" rel="noreferrer">전체화면으로 보기</a>
-</div>`;
+function linkButton(kind: OutputKind, label: string, result: DriveUploadResult | null): string {
+  if (!result) {
+    return `<div class="output-btn ${ACCENT[kind]} is-empty"><span>${label}</span><span class="open">미생성</span></div>`;
+  }
+  return `<a class="output-btn ${ACCENT[kind]}" href="${result.webViewLink}" target="_blank" rel="noreferrer"><span>${label}</span><span class="open">열기 ↗</span></a>`;
 }
 
-function buildVideoSection(result: DriveUploadResult | null): string {
-  if (!result) return emptyState("영상자료가 아직 생성되지 않았습니다.");
-  return `<div class="frame-16-9">
-<iframe src="${driveFilePreviewUrl(result.fileId)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-</div>`;
-}
-
-function buildAudioSection(result: DriveUploadResult | null): string {
-  if (!result) return emptyState("음성자료가 아직 생성되지 않았습니다.");
-  return `<div class="audio-player">
-<iframe src="${driveFilePreviewUrl(result.fileId)}" allow="autoplay; encrypted-media"></iframe>
-</div>`;
-}
-
-function buildQtSection(markdown: string | null): string {
-  if (!markdown) return emptyState("개인 큐티자료가 아직 생성되지 않았습니다.");
-  const sections = splitByH2(markdown);
-  const day1 = sections[0] ? renderMarkdownFragment(sections[0].body) : renderMarkdownFragment(markdown);
-  const day2 = sections[1] ? renderMarkdownFragment(sections[1].body) : "";
-
-  return `<div class="card">
-<div class="qt-tabs">
-<button class="active" onclick="showDay(1,this)">${escapeHtml(sections[0]?.title || "1일차")}</button>
-${sections[1] ? `<button onclick="showDay(2,this)">${escapeHtml(sections[1].title)}</button>` : ""}
-</div>
-<div class="qt-day active" id="qt-day-1">${day1}</div>
-${sections[1] ? `<div class="qt-day" id="qt-day-2">${day2}</div>` : ""}
-</div>`;
-}
-
-function buildStudySection(markdown: string | null): string {
-  if (!markdown) return emptyState("성경공부자료가 아직 생성되지 않았습니다.");
-  const sections = splitByH2(markdown);
-  if (!sections.length) return `<div class="card">${renderMarkdownFragment(markdown)}</div>`;
-  const blocks = sections
-    .map((s) => `<div class="study-block"><h3>${escapeHtml(s.title)}</h3>${renderMarkdownFragment(s.body)}</div>`)
-    .join("\n");
-  return `<div class="card">${blocks}</div>`;
+function accordionButton(
+  kind: OutputKind,
+  label: string,
+  markdown: string | null,
+  render: (markdown: string) => string,
+): string {
+  if (!markdown) {
+    return `<div class="output-btn ${ACCENT[kind]} is-empty"><span>${label}</span><span class="open">미생성</span></div>`;
+  }
+  return `<details class="output-btn ${ACCENT[kind]}"><summary><span>${label}</span><span class="open">펼치기 ▾</span></summary><div class="accordion-body">${render(markdown)}</div></details>`;
 }
 
 function emptyState(message: string): string {

@@ -6,235 +6,132 @@
 <title>{{TITLE}} | 설교 산출물</title>
 <style>
   :root{
-    --bg:#faf7f2;
-    --surface:#ffffff;
-    --border:#e7e0d4;
-    --text:#2b2620;
-    --text-2:#6b6255;
-    --text-3:#9a8f7d;
-    --accent:#8a5a3b;
-    --accent-bg:#f3e6da;
-    --nav-h:56px;
+    --page-bg:#f2f3f5;
+    --card-bg:#ffffff;
+    --border:#eceef1;
+    --text:#1a1c1f;
+    --text-2:#6b7280;
+    --text-3:#9aa1ab;
+    --badge-bg:#eef0ff;
+    --badge-text:#5b57e0;
   }
   [data-theme="dark"]{
-    --bg:#1c1815;
-    --surface:#25201b;
-    --border:#3a332a;
-    --text:#f0ebe2;
-    --text-2:#c2b8a8;
-    --text-3:#8c8172;
-    --accent:#e0a877;
-    --accent-bg:#3a2c1f;
+    --page-bg:#131417;
+    --card-bg:#1d1f23;
+    --border:#2c2f34;
+    --text:#f2f3f5;
+    --text-2:#a7adb6;
+    --text-3:#7d838d;
+    --badge-bg:#2a2860;
+    --badge-text:#b3aeff;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
-    background:var(--bg);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:32px 16px;
+    background:var(--page-bg);
     color:var(--text);
-    line-height:1.7;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    line-height:1.6;
   }
-  a{color:var(--accent);}
-  nav.top{
-    position:sticky;top:0;z-index:50;
-    height:var(--nav-h);
-    background:var(--surface);
-    border-bottom:1px solid var(--border);
-    display:flex;align-items:center;
-    padding:0 16px;
-    overflow-x:auto;
-    white-space:nowrap;
-    gap:4px;
-  }
-  nav.top a{
-    font-size:13px;color:var(--text-2);text-decoration:none;
-    padding:8px 12px;border-radius:8px;
-  }
-  nav.top a:hover{background:var(--accent-bg);color:var(--accent);}
-  .theme-toggle{
-    margin-left:auto;flex-shrink:0;
-    border:1px solid var(--border);background:var(--surface);color:var(--text-2);
-    border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;
-  }
-  .hero{
-    padding:40px 20px 32px;text-align:center;
-    border-bottom:1px solid var(--border);
-  }
-  .hero .badge{
-    display:inline-block;font-size:12px;color:var(--accent);
-    background:var(--accent-bg);padding:4px 12px;border-radius:999px;margin-bottom:12px;
-  }
-  .hero h1{font-size:26px;font-weight:700;margin:0 0 8px;}
-  .hero .meta{font-size:14px;color:var(--text-2);}
-  main{max-width:720px;margin:0 auto;padding:0 20px 60px;}
-  section{padding:36px 0;border-bottom:1px solid var(--border);scroll-margin-top:calc(var(--nav-h) + 12px);}
-  section:last-child{border-bottom:none;}
-  section h2{
-    font-size:18px;font-weight:700;margin:0 0 4px;
-    display:flex;align-items:center;gap:8px;
-  }
-  section .icon{
-    width:28px;height:28px;border-radius:8px;background:var(--accent-bg);color:var(--accent);
-    display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;
-  }
-  section .desc{font-size:13px;color:var(--text-3);margin:0 0 18px;}
   .card{
-    background:var(--surface);border:1px solid var(--border);border-radius:14px;
-    padding:20px;
+    width:100%;
+    max-width:460px;
+    background:var(--card-bg);
+    border-radius:28px;
+    padding:28px 24px 32px;
+    box-shadow:0 12px 40px rgba(20,20,30,0.08);
+    position:relative;
+  }
+  .theme-toggle{
+    position:absolute;top:20px;right:20px;
+    border:1px solid var(--border);background:transparent;color:var(--text-2);
+    border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer;
+  }
+  .badge{
+    display:inline-block;font-size:13px;font-weight:700;color:var(--badge-text);
+    background:var(--badge-bg);padding:6px 14px;border-radius:999px;margin-bottom:14px;
+  }
+  h1{font-size:23px;font-weight:800;line-height:1.35;margin:0 0 6px;letter-spacing:-0.01em;}
+  .scripture{font-size:14px;color:var(--text-2);margin:0;}
+  .section-title{
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    margin:28px 0 12px;
+  }
+  .section-title span.label{font-size:15px;font-weight:700;}
+  .section-title span.hint{font-size:12px;color:var(--text-3);flex-shrink:0;}
+  .infographic-img{
+    display:block;width:100%;border-radius:16px;border:1px solid var(--border);cursor:pointer;
   }
   .empty-state{
-    background:var(--surface);border:1px dashed var(--border);border-radius:14px;
-    padding:24px;text-align:center;color:var(--text-3);font-size:13px;
+    background:var(--page-bg);border:1px dashed var(--border);border-radius:16px;
+    padding:20px;text-align:center;color:var(--text-3);font-size:13px;
   }
-  .infographic-box{
-    aspect-ratio:4/5;max-width:340px;margin:0 auto;
-    border-radius:14px;
-    background:
-      radial-gradient(circle at 30% 20%, var(--accent-bg), transparent 60%),
-      var(--surface);
-    border:1px solid var(--border);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:10px;color:var(--text-3);font-size:13px;
+  .divider{border:0;border-top:1px solid var(--border);margin:30px 0;}
+  .output-list{display:flex;flex-direction:column;gap:10px;}
+  a.output-btn,details.output-btn summary{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border-radius:16px;padding:16px 18px;font-weight:700;font-size:15px;
+    text-decoration:none;cursor:pointer;list-style:none;
   }
-  .infographic-box .big{font-size:32px;}
-  .btn{
-    display:inline-flex;align-items:center;gap:6px;
-    font-size:13px;padding:9px 16px;border-radius:10px;
-    border:1px solid var(--border);background:var(--surface);color:var(--text);
-    text-decoration:none;cursor:pointer;
+  details.output-btn summary::-webkit-details-marker{display:none;}
+  a.output-btn .open,details.output-btn summary .open{font-size:13px;font-weight:600;opacity:0.85;flex-shrink:0;}
+  details.output-btn .accordion-body{
+    padding:4px 18px 18px;font-size:14px;color:var(--text);
   }
-  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .actions{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
-  .summary-text p{margin:0 0 14px;font-size:15px;}
-  .summary-text .point{
-    background:var(--accent-bg);color:var(--accent);
-    border-radius:10px;padding:12px 16px;font-size:14px;margin:16px 0;
-  }
-  .frame-16-9{
-    position:relative;width:100%;padding-top:56.25%;
-    background:#111;border-radius:14px;overflow:hidden;
-  }
-  .frame-16-9 iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
-  .frame-16-9 .fill{
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    color:#cfc9bf;font-size:13px;flex-direction:column;gap:10px;
-  }
-  .play-circle{
-    width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.12);
-    display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;
-  }
-  .slide-frame{
-    background:#111;border-radius:14px;aspect-ratio:16/10;
-    display:flex;align-items:center;justify-content:center;color:#cfc9bf;font-size:13px;
-    position:relative;overflow:hidden;
-  }
-  .slide-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
-  .audio-player{
-    background:var(--surface);
-    border:1px solid var(--border);border-radius:14px;padding:12px;
-  }
-  .audio-player iframe{width:100%;height:100px;border:0;border-radius:8px;}
-  .qt-tabs{display:flex;gap:8px;margin-bottom:16px;}
-  .qt-tabs button{
-    flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);
-    background:var(--surface);color:var(--text-2);font-size:13px;cursor:pointer;
-  }
-  .qt-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .qt-day{display:none;}
-  .qt-day.active{display:block;}
-  .qt-block{margin-bottom:16px;}
-  .qt-block h3{font-size:14px;margin:0 0 6px;color:var(--text-2);font-weight:700;}
-  .qt-block ol,.qt-block ul,.study-block ol,.study-block ul{margin:0;padding-left:20px;font-size:14px;}
-  .qt-block li,.study-block li{margin-bottom:6px;}
-  .qt-block p,.study-block p{font-size:14px;margin:0 0 8px;}
-  .study-block{margin-bottom:18px;}
-  .study-block h3{font-size:14px;margin:0 0 8px;color:var(--accent);font-weight:700;}
-  footer{
-    text-align:center;padding:28px 20px 40px;font-size:12px;color:var(--text-3);
-  }
+  details.output-btn .accordion-body p{margin:0 0 10px;}
+  details.output-btn .accordion-body ul,details.output-btn .accordion-body ol{margin:0 0 10px;padding-left:20px;}
+  details.output-btn .accordion-body h3{font-size:13px;margin:14px 0 6px;opacity:0.75;}
+  .output-btn.is-empty{opacity:0.55;cursor:default;}
+  .output-btn.is-empty .open{opacity:0.6;}
+  .accent-summary{background:#eaf0ff;color:#3457d5;}
+  .accent-slides{background:#f1eeff;color:#6c4fd8;}
+  .accent-video{background:#ffedf1;color:#d43d6c;}
+  .accent-audio{background:#f5edff;color:#8b3fd8;}
+  .accent-qt{background:#e7f9ee;color:#159a52;}
+  .accent-study{background:#fff8e1;color:#b8860b;}
+  [data-theme="dark"] .accent-summary{background:#1e2747;color:#9db3ff;}
+  [data-theme="dark"] .accent-slides{background:#241f42;color:#c3b3ff;}
+  [data-theme="dark"] .accent-video{background:#3a1c26;color:#ff9ab7;}
+  [data-theme="dark"] .accent-audio{background:#2c1f42;color:#d3aeff;}
+  [data-theme="dark"] .accent-qt{background:#123322;color:#7bd9a4;}
+  [data-theme="dark"] .accent-study{background:#3a2f0f;color:#f0cf6e;}
+  footer{text-align:center;padding-top:28px;font-size:11px;color:var(--text-3);}
   @media (max-width:480px){
-    .hero h1{font-size:21px;}
-    section{padding:28px 0;}
+    .card{padding:24px 18px 28px;border-radius:22px;}
+    h1{font-size:20px;}
   }
 </style>
 </head>
 <body>
 
-<nav class="top">
-  <a href="#infographic">인포그래픽</a>
-  <a href="#summary">설교요약</a>
-  <a href="#slides">슬라이드</a>
-  <a href="#video">영상</a>
-  <a href="#audio">음성</a>
-  <a href="#qt">큐티</a>
-  <a href="#study">성경공부</a>
+<div class="card">
   <button class="theme-toggle" onclick="document.documentElement.toggleAttribute('data-theme')">다크모드</button>
-</nav>
 
-<div class="hero">
   <span class="badge">{{SERIES}}</span>
   <h1>{{TITLE}}</h1>
-  <div class="meta">{{SCRIPTURE}} · {{DATE}}</div>
+  <p class="scripture">{{SCRIPTURE}} · {{DATE}}</p>
+
+  <div class="section-title">
+    <span class="label">🎨 말씀 인포그래픽</span>
+    <span class="hint">클릭하여 확대</span>
+  </div>
+  <!--INFOGRAPHIC_CONTENT--><!--/INFOGRAPHIC_CONTENT-->
+
+  <hr class="divider">
+
+  <div class="section-title">
+    <span class="label">📁 관련 자료 모음</span>
+  </div>
+  <div class="output-list">
+    <!--OUTPUT_LIST--><!--/OUTPUT_LIST-->
+  </div>
+
+  <footer>Sermon Multiplier로 생성됨 · 원본 노트: {{NOTE_FILENAME}} · 생성 시각: {{GENERATED_AT}}</footer>
 </div>
-
-<main>
-
-  <section id="infographic">
-    <h2><span class="icon">🖼</span>인포그래픽</h2>
-    <p class="desc">본문의 핵심 흐름을 한 장으로 정리했습니다.</p>
-    <!--INFOGRAPHIC_CONTENT--><!--/INFOGRAPHIC_CONTENT-->
-  </section>
-
-  <section id="summary">
-    <h2><span class="icon">📝</span>설교문 요약</h2>
-    <p class="desc">전체 설교 중 핵심 대지와 적용점만 정리한 요약본입니다.</p>
-    <!--SUMMARY_CONTENT--><!--/SUMMARY_CONTENT-->
-  </section>
-
-  <section id="slides">
-    <h2><span class="icon">📊</span>슬라이드</h2>
-    <p class="desc">소그룹·주일학교에서 바로 쓸 수 있는 슬라이드 자료입니다.</p>
-    <!--SLIDES_CONTENT--><!--/SLIDES_CONTENT-->
-  </section>
-
-  <section id="video">
-    <h2><span class="icon">🎬</span>영상자료</h2>
-    <p class="desc">설교 내용을 요약한 영상입니다.</p>
-    <!--VIDEO_CONTENT--><!--/VIDEO_CONTENT-->
-  </section>
-
-  <section id="audio">
-    <h2><span class="icon">🎧</span>음성자료</h2>
-    <p class="desc">이동 중에도 들을 수 있는 오디오 오버뷰입니다.</p>
-    <!--AUDIO_CONTENT--><!--/AUDIO_CONTENT-->
-  </section>
-
-  <section id="qt">
-    <h2><span class="icon">📖</span>개인 큐티 (2일)</h2>
-    <p class="desc">이번 주 본문을 이틀에 걸쳐 개인적으로 묵상합니다.</p>
-    <!--QT_CONTENT--><!--/QT_CONTENT-->
-  </section>
-
-  <section id="study">
-    <h2><span class="icon">👥</span>성경공부자료</h2>
-    <p class="desc">40~60분 소그룹 모임용 나눔 질문입니다.</p>
-    <!--STUDY_CONTENT--><!--/STUDY_CONTENT-->
-  </section>
-
-</main>
-
-<footer>
-  설교 멀티산출물 플러그인으로 생성됨 · 원본 노트: {{NOTE_FILENAME}} · 생성 시각: {{GENERATED_AT}}
-</footer>
-
-<script>
-function showDay(n, btn){
-  document.querySelectorAll('.qt-day').forEach(function(el){ el.classList.remove('active'); });
-  document.getElementById('qt-day-' + n).classList.add('active');
-  document.querySelectorAll('.qt-tabs button').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-}
-</script>
 
 </body>
 </html>

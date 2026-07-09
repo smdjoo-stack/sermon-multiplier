@@ -34,11 +34,30 @@ import { writeRunHistory, slugifyNotePath } from "./history";
 import { buildLandingPage, LandingPageData } from "./landingPageBuilder";
 import { LANDING_PAGE_TEMPLATE } from "./seeds";
 
-const LOCAL_OUTPUT_FILE: Record<"summary" | "qt" | "bible_study", string> = {
-  summary: "설교문요약.md",
-  qt: "큐티자료.md",
-  bible_study: "성경공부자료.md",
+const LOCAL_OUTPUT_LABEL: Record<"summary" | "qt" | "bible_study", string> = {
+  summary: "설교문요약",
+  qt: "큐티자료",
+  bible_study: "성경공부자료",
 };
+
+// 파일명에 노트 제목과 날짜(YYMMDD)를 포함해 어떤 설교의 산출물인지 파일명만 보고 알 수 있게 한다.
+// 예: "260709_예수와함께물위를걷다_설교문요약.md"
+function buildLocalOutputFileName(kind: "summary" | "qt" | "bible_study", frontmatter: SermonFrontmatter): string {
+  const dateCode = formatDateCode(frontmatter.date);
+  const titlePart = sanitizeFileNamePart(frontmatter.title);
+  const parts = [dateCode, titlePart, LOCAL_OUTPUT_LABEL[kind]].filter(Boolean);
+  return `${parts.join("_")}.md`;
+}
+
+function formatDateCode(date: string): string {
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return "";
+  return `${match[1]!.slice(2)}${match[2]}${match[3]}`;
+}
+
+function sanitizeFileNamePart(value: string): string {
+  return value.trim().replaceAll(/[\\/:*?"<>|]/g, "").replaceAll(/\s+/g, "").slice(0, 60);
+}
 
 export interface PipelineContext {
   vaultPath: string; // Vault 루트 절대경로
@@ -93,7 +112,7 @@ export async function runPipeline(ctx: PipelineContext, options: RunPipelineOpti
       const prompt = renderPrompt(template, frontmatter, originalBody);
       const command = await resolveAiCommand(ctx.settings.aiProvider, ctx.settings.aiCommand);
       const content = await runAiCommand(command, prompt, ctx.settings.aiCliTimeoutSeconds);
-      const fileName = LOCAL_OUTPUT_FILE[kind];
+      const fileName = buildLocalOutputFileName(kind, frontmatter);
       await writeFile(join(noteDirAbs, fileName), `${content.trim()}\n`, "utf8");
       return fileName;
     }),
