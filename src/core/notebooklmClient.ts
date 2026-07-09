@@ -218,11 +218,33 @@ export async function generateNotebookLmOutputs(
   const notebookId = params.notebookId || (await createNotebook(session, params.notebookTitle));
   await addSermonSource(session, notebookId, params.sourceTitle, params.sourceText);
 
-  const artifactIds: Partial<Record<string, string>> = {};
   const results: NotebookLmArtifactResult[] = [];
 
-  // ③ 4개(또는 요청된 개수) 아티팩트 생성 툴을 순차 호출한다(NotebookLM 세션 동시성 취약 때문에 병렬 실행하지 않음).
+  // ③ 아티팩트 생성 전에 이미 완료된 게 있는지 먼저 확인한다 — 예전 실행이 폴링 타임아웃으로
+  // 포기했지만 NotebookLM에서는 그 뒤에 실제로 완료된 경우, 중복 생성하지 않고 그대로 쓴다.
+  let existingArtifacts: StudioArtifact[] = [];
+  try {
+    const status = await session.callTool<{ artifacts?: StudioArtifact[] }>("studio_status", {
+      notebook_id: notebookId,
+      action: "status",
+    });
+    existingArtifacts = status.artifacts || [];
+  } catch (error) {
+    console.error("기존 아티팩트 조회 실패, 새로 생성합니다:", describeError(error));
+  }
+
+  const alreadyCompleted: StudioArtifact[] = [];
+  const requestsToCreate: NotebookLmArtifactRequest[] = [];
   for (const request of requests) {
+    const existing = existingArtifacts.find(
+      (a) => a.type === ARTIFACT_TYPE[request.kind] && a.status === "completed",
+    );
+    if (existing) alreadyCompleted.push(existing);
+    else requestsToCreate.push(request);
+  }
+
+  // ④ 아직 없는 것만 생성 툴을 순차 호출한다(NotebookLM 세션 동시성 취약 때문에 병렬 실행하지 않음).
+  for (const request of requestsToCreate) {
     try {
       const artifactType = ARTIFACT_TYPE[request.kind];
       // language를 지정하지 않으면 NOTEBOOKLM_HL 환경변수 또는 영어(en)로 기본 생성되므로 명시한다.
@@ -240,24 +262,25 @@ export async function generateNotebookLmOutputs(
         options,
       );
       if (created.status === "error") throw new Error(created.error || "studio_create 실패");
-      if (created.artifact_id) artifactIds[request.kind] = created.artifact_id;
     } catch (error) {
       results.push({ kind: request.kind, status: "error", error: describeError(error) });
     }
   }
 
-  // ④ 완료까지 폴링(기본 타임아웃 15분)
-  const pending = requests.filter((r) => !results.some((res) => res.kind === r.kind));
-  const finalArtifacts = await pollUntilComplete(
+  // ⑤ 새로 만든 것만 완료까지 폴링한다(기본 타임아웃 15분) — 이미 완료된 건 폴링할 필요가 없다.
+  const pendingToPoll = requestsToCreate.filter((r) => !results.some((res) => res.kind === r.kind));
+  const polledArtifacts = await pollUntilComplete(
     session,
     notebookId,
-    pending.map((r) => r.kind),
+    pendingToPoll.map((r) => r.kind),
     maxWaitSeconds,
     onPollTick,
   );
+  const finalArtifacts = [...alreadyCompleted, ...polledArtifacts];
 
-  // ⑤ 완성 파일을 로컬 다운로드 폴더로 내려받는다.
-  for (const request of pending) {
+  // ⑥ 완성 파일을 로컬 다운로드 폴더로 내려받는다.
+  const downloadTargets = requests.filter((r) => !results.some((res) => res.kind === r.kind));
+  for (const request of downloadTargets) {
     const artifact = finalArtifacts.find((a) => a.type === ARTIFACT_TYPE[request.kind]);
     if (!artifact || artifact.status !== "completed") {
       results.push({
